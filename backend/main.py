@@ -12,7 +12,9 @@ from message_types import (
     user_list_message,
     sharer_changed_message,
     signal_message,
-    pong_message
+    pong_message,
+    voice_signal_message,
+    voice_state_message
 )
 
 
@@ -84,6 +86,25 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, user_id: str):
             elif msg_type == MessageType.PING:
                 await manager.update_heartbeat(room_id, user_id)
                 await manager.send_to_user(room_id, user_id, pong_message())
+
+            elif msg_type == MessageType.VOICE_SIGNAL:
+                target_id = message.get("target")
+                if target_id:
+                    await manager.send_to_user(
+                        room_id,
+                        target_id,
+                        voice_signal_message(user_id, message.get("data"))
+                    )
+
+            elif msg_type == MessageType.VOICE_STATE:
+                muted = message.get("muted", False)
+                deafened = message.get("deafened", False)
+                await manager.update_voice_state(room_id, user_id, muted, deafened)
+                await manager.broadcast(
+                    room_id,
+                    voice_state_message(user_id, muted, deafened),
+                    exclude_id=user_id
+                )
 
     except WebSocketDisconnect:
         pass

@@ -9,6 +9,8 @@ class MessageType(str, Enum):
     STOP_SHARING = "stop-sharing"
     PING = "ping"
     PONG = "pong"
+    VOICE_SIGNAL = "voice-signal"
+    VOICE_STATE = "voice-state"
 
 
 def user_list_message(users: list) -> dict:
@@ -36,3 +38,20 @@ def signal_message(sender_id: str, data: dict) -> dict:
 
 def pong_message() -> dict:
     return {"type": MessageType.PONG}
+
+
+def voice_signal_message(sender_id: str, data: dict) -> dict:
+    return {
+        "type": MessageType.VOICE_SIGNAL,
+        "sender": sender_id,
+        "data": data
+    }
+
+
+def voice_state_message(user_id: str, muted: bool, deafened: bool) -> dict:
+    return {
+        "type": MessageType.VOICE_STATE,
+        "userId": user_id,
+        "muted": muted,
+        "deafened": deafened
+    }

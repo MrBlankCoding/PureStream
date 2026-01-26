@@ -14,9 +14,10 @@
 
     <div id="toast-container" class="absolute top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-    <div id="app-screen" class="flex-1 flex overflow-hidden">
+    <div id="app-screen" class="flex-1 flex flex-col md:flex-row overflow-hidden">
 
-        <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col transition-all duration-300"
+        <aside
+            class="w-full md:w-64 h-auto md:h-full max-h-[30vh] md:max-h-full bg-slate-900 border-b md:border-b-0 md:border-r border-slate-800 flex flex-col transition-all duration-300 flex-shrink-0"
             id="sidebar">
             <div class="p-6 border-b border-slate-800">
                 <h2 class="text-xl font-bold text-white">Room</h2>
@@ -54,32 +55,45 @@
                     class="hidden max-w-full max-h-full rounded-lg shadow-2xl"></video>
             </div>
 
-            <div class="h-20 bg-slate-900 border-t border-slate-800 flex items-center justify-between px-8">
-                <div class="flex items-center gap-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg"
+            <div
+                class="h-16 md:h-20 bg-slate-900 border-t border-slate-800 flex items-center justify-between px-4 md:px-8">
+                <div class="flex items-center gap-2 md:gap-4">
+                    <div class="flex items-center gap-2 md:gap-3">
+                        <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm md:text-lg"
                             id="my-avatar">?</div>
                         <div class="flex flex-col">
-                            <span id="my-username" class="font-bold text-white leading-none">Me</span>
-                            <span class="text-xs text-emerald-400">Online</span>
+                            <span id="my-username"
+                                class="font-bold text-white leading-none text-sm md:text-base">Me</span>
+                            <span class="text-[10px] md:text-xs text-emerald-400">Online</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 md:gap-3">
+                    <button id="mute-btn"
+                        class="p-2 md:p-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-all"
+                        title="Toggle Mute">
+                        <i data-lucide="mic" class="w-4 h-4 md:w-5 md:h-5"></i>
+                    </button>
+                    <button id="deafen-btn"
+                        class="p-2 md:p-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-all"
+                        title="Toggle Deafen">
+                        <i data-lucide="volume-2" class="w-4 h-4 md:w-5 md:h-5"></i>
+                    </button>
+                    <div class="w-px h-6 md:h-8 bg-slate-700"></div>
                     <button id="fullscreen-btn"
-                        class="p-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-all"
+                        class="p-2 md:p-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-all"
                         title="Toggle Fullscreen">
-                        <i data-lucide="maximize" class="w-5 h-5"></i>
+                        <i data-lucide="maximize" class="w-4 h-4 md:w-5 md:h-5"></i>
                     </button>
                     <button id="share-screen-btn"
-                        class="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all">
-                        <i data-lucide="monitor-up" class="w-5 h-5"></i>
-                        Share Screen
+                        class="flex items-center gap-2 px-3 py-2 md:px-6 md:py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all text-sm md:text-base">
+                        <i data-lucide="monitor-up" class="w-4 h-4 md:w-5 md:h-5"></i>
+                        <span class="hidden md:inline">Share Screen</span>
                     </button>
                     <button id="stop-share-btn"
-                        class="hidden flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-all">
-                        Stop Sharing
+                        class="hidden flex items-center gap-2 px-3 py-2 md:px-6 md:py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-all text-sm md:text-base">
+                        <span class="hidden md:inline">Stop Sharing</span>
                     </button>
                 </div>
             </div>

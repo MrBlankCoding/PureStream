@@ -12,13 +12,14 @@ const sharerNameDisplay = document.getElementById("sharer-name-display");
 const shareScreenBtn = document.getElementById("share-screen-btn");
 const stopShareBtn = document.getElementById("stop-share-btn");
 
-export function renderUserList(users, sharerId, myUserId) {
+export function renderUserList(users, sharerId, myUserId, voicePeers = new Map()) {
     userListEl.innerHTML = "";
 
     users.forEach(user => {
         const isMe = user.id === myUserId;
         const isSharer = user.id === sharerId;
         const initial = user.username.charAt(0).toUpperCase();
+        const voiceState = voicePeers.get(user.id) || { muted: user.muted, deafened: user.deafened };
 
         const div = document.createElement("div");
         div.className = twMerge(
@@ -35,6 +36,13 @@ export function renderUserList(users, sharerId, myUserId) {
             )
         );
 
+        const micIcon = voiceState.muted
+            ? '<i data-lucide="mic-off" class="w-3.5 h-3.5 text-red-400"></i>'
+            : '<i data-lucide="mic" class="w-3.5 h-3.5 text-emerald-400"></i>';
+        const speakerIcon = voiceState.deafened
+            ? '<i data-lucide="volume-off" class="w-3.5 h-3.5 text-red-400"></i>'
+            : '';
+
         div.innerHTML = `
             <div class="relative">
                 <div class="${avatarClasses}">
@@ -47,6 +55,10 @@ export function renderUserList(users, sharerId, myUserId) {
                     <span class="text-sm font-medium text-slate-200 truncate">${user.username}${isMe ? " (You)" : ""}</span>
                     ${isSharer ? '<span class="px-1.5 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded uppercase animate-pulse">Live</span>' : ''}
                 </div>
+            </div>
+            <div class="flex items-center gap-1">
+                ${micIcon}
+                ${speakerIcon}
             </div>
         `;
         userListEl.appendChild(div);
@@ -105,4 +117,33 @@ export function showToast(msg, type = "info") {
     }).showToast();
 }
 
+const muteBtn = document.getElementById("mute-btn");
+const deafenBtn = document.getElementById("deafen-btn");
 
+export function updateVoiceControls(muted, deafened) {
+    if (muteBtn) {
+        const icon = muteBtn.querySelector("i");
+        if (muted) {
+            muteBtn.classList.add("bg-red-500/20", "text-red-400");
+            muteBtn.classList.remove("bg-slate-800", "text-slate-300");
+            if (icon) icon.setAttribute("data-lucide", "mic-off");
+        } else {
+            muteBtn.classList.remove("bg-red-500/20", "text-red-400");
+            muteBtn.classList.add("bg-slate-800", "text-slate-300");
+            if (icon) icon.setAttribute("data-lucide", "mic");
+        }
+    }
+    if (deafenBtn) {
+        const icon = deafenBtn.querySelector("i");
+        if (deafened) {
+            deafenBtn.classList.add("bg-red-500/20", "text-red-400");
+            deafenBtn.classList.remove("bg-slate-800", "text-slate-300");
+            if (icon) icon.setAttribute("data-lucide", "volume-off");
+        } else {
+            deafenBtn.classList.remove("bg-red-500/20", "text-red-400");
+            deafenBtn.classList.add("bg-slate-800", "text-slate-300");
+            if (icon) icon.setAttribute("data-lucide", "volume-2");
+        }
+    }
+    createIcons({ icons });
+}

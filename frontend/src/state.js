@@ -7,7 +7,10 @@ class AppState {
             users: [],
             sharerId: null,
             sharerName: null,
-            isSharing: false
+            isSharing: false,
+            voiceMuted: false,
+            voiceDeafened: false,
+            voicePeers: new Map()
         };
         this._listeners = new Set();
     }
@@ -19,6 +22,9 @@ class AppState {
     get sharerId() { return this._state.sharerId; }
     get sharerName() { return this._state.sharerName; }
     get isSharing() { return this._state.isSharing; }
+    get voiceMuted() { return this._state.voiceMuted; }
+    get voiceDeafened() { return this._state.voiceDeafened; }
+    get voicePeers() { return this._state.voicePeers; }
 
     setUsername(name) {
         this._state.username = name;
@@ -43,6 +49,21 @@ class AppState {
 
     setIsSharing(sharing) {
         this._state.isSharing = sharing;
+        this._notify();
+    }
+
+    setVoiceMuted(muted) {
+        this._state.voiceMuted = muted;
+        this._notify();
+    }
+
+    setVoiceDeafened(deafened) {
+        this._state.voiceDeafened = deafened;
+        this._notify();
+    }
+
+    setVoicePeerState(userId, muted, deafened) {
+        this._state.voicePeers.set(userId, { muted, deafened });
         this._notify();
     }
 

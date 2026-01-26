@@ -15,6 +15,8 @@ class User:
     ws: WebSocket
     username: str
     last_heartbeat: float = field(default_factory=time.time)
+    muted: bool = False
+    deafened: bool = False
 
 
 @dataclass
@@ -87,9 +89,18 @@ class ConnectionManager:
             if room_id not in self._rooms:
                 return []
             return [
-                {"id": uid, "username": u.username}
+                {"id": uid, "username": u.username, "muted": u.muted, "deafened": u.deafened}
                 for uid, u in self._rooms[room_id].users.items()
             ]
+
+    async def update_voice_state(self, room_id: str, user_id: str, muted: bool, deafened: bool) -> bool:
+        async with self._lock:
+            if room_id in self._rooms and user_id in self._rooms[room_id].users:
+                user = self._rooms[room_id].users[user_id]
+                user.muted = muted
+                user.deafened = deafened
+                return True
+            return False
 
     async def broadcast(self, room_id: str, message: dict, exclude_id: str | None = None) -> None:
         async with self._lock:

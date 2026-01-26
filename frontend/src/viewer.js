@@ -2,12 +2,14 @@ import "./styles.css";
 import { state } from "./state.js";
 import { ws } from "./websocket.js";
 import { rtc } from "./webrtc.js";
+import { voice } from "./voicechat.js";
 import {
     renderUserList,
     updateVideoStage,
     updateShareControls,
     showToast,
-    setVideoSource
+    setVideoSource,
+    updateVoiceControls
 } from "./ui.js";
 import { createIcons, icons } from "lucide/dist/cjs/lucide.js";
 
@@ -18,6 +20,8 @@ const leaveBtn = document.getElementById("leave-btn");
 const shareScreenBtn = document.getElementById("share-screen-btn");
 const stopShareBtn = document.getElementById("stop-share-btn");
 const fullscreenBtn = document.getElementById("fullscreen-btn");
+const muteBtn = document.getElementById("mute-btn");
+const deafenBtn = document.getElementById("deafen-btn");
 const videoStage = document.getElementById("video-stage");
 const urlParams = new URLSearchParams(window.location.search);
 const roomId = urlParams.get("room");
@@ -40,13 +44,36 @@ function initViewer(roomId, username) {
 }
 
 leaveBtn.onclick = () => {
+    voice.stop();
+    ws.disconnect();
     window.location.href = "/";
 };
 
-shareScreenBtn.onclick = startSharing;
-stopShareBtn.onclick = stopSharing;
+window.addEventListener("beforeunload", () => {
+    voice.stop();
+    ws.disconnect();
+});
 
 fullscreenBtn.onclick = toggleFullscreen;
+
+muteBtn.onclick = toggleMute;
+deafenBtn.onclick = toggleDeafen;
+
+function toggleMute() {
+    const newMuted = !state.voiceMuted;
+    voice.setMuted(newMuted);
+    state.setVoiceMuted(newMuted);
+    updateVoiceControls(newMuted, state.voiceDeafened);
+    renderUserList(state.users, state.sharerId, state.userId, state.voicePeers);
+}
+
+function toggleDeafen() {
+    const newDeafened = !state.voiceDeafened;
+    voice.setDeafened(newDeafened);
+    state.setVoiceDeafened(newDeafened);
+    updateVoiceControls(state.voiceMuted, newDeafened);
+    renderUserList(state.users, state.sharerId, state.userId, state.voicePeers);
+}
 
 function toggleFullscreen() {
     if (!document.fullscreenElement) {
@@ -82,7 +109,12 @@ function initConnection() {
 
     ws.on("user-list", (msg) => {
         state.setUsers(msg.users);
-        renderUserList(msg.users, state.sharerId, state.userId);
+        msg.users.forEach(u => {
+            if (u.id !== state.userId) {
+                state.setVoicePeerState(u.id, u.muted, u.deafened);
+            }
+        });
+        renderUserList(msg.users, state.sharerId, state.userId, state.voicePeers);
 
         if (state.isSharing) {
             msg.users.forEach(u => {
@@ -91,11 +123,19 @@ function initConnection() {
                 }
             });
         }
+
+        if (voice.isActive) {
+            msg.users.forEach(u => {
+                if (u.id !== state.userId) {
+                    voice.connectToUser(u.id);
+                }
+            });
+        }
     });
 
     ws.on("sharer-changed", (msg) => {
         state.setSharer(msg.sharerId, msg.sharerName);
-        renderUserList(state.users, msg.sharerId, state.userId);
+        renderUserList(state.users, msg.sharerId, state.userId, state.voicePeers);
 
         if (!msg.sharerId) {
             updateVideoStage(false, null);
@@ -123,23 +163,56 @@ function initConnection() {
         }
     });
 
-    ws.connect(state.roomId, state.userId);
-}
+    ws.on("voice-signal", async (msg) => {
+        await voice.handleSignal(msg.sender, msg.data);
+    });
 
-async function startSharing() {
-    try {
-        await rtc.startSharing(state.users, state.userId);
-        state.setIsSharing(true);
-        updateShareControls(true);
-        ws.send({ type: "start-sharing" });
-    } catch (err) {
-        showToast("Failed to start share: " + err.message, "error");
+    ws.on("voice-state", (msg) => {
+        state.setVoicePeerState(msg.userId, msg.muted, msg.deafened);
+        renderUserList(state.users, state.sharerId, state.userId, state.voicePeers);
+    });
+
+    voice.setOnStateChange((muted, deafened) => {
+        state.setVoiceMuted(muted);
+        state.setVoiceDeafened(deafened);
+        updateVoiceControls(muted, deafened);
+    });
+
+    async function startSharing() {
+        try {
+            await rtc.startSharing(state.users, state.userId);
+            state.setIsSharing(true);
+            updateShareControls(true);
+            ws.send({ type: "start-sharing" });
+        } catch (err) {
+            showToast("Failed to start share: " + err.message, "error");
+        }
     }
-}
 
-function stopSharing() {
-    rtc.stopSharing();
-    state.setIsSharing(false);
-    updateShareControls(false);
-    ws.send({ type: "stop-sharing" });
+    function stopSharing() {
+        rtc.stopSharing();
+        state.setIsSharing(false);
+        updateShareControls(false);
+        ws.send({ type: "stop-sharing" });
+    }
+
+    shareScreenBtn.onclick = startSharing;
+    stopShareBtn.onclick = stopSharing;
+
+    ws.connect(state.roomId, state.userId);
+
+    startVoiceChat();
+
+    async function startVoiceChat() {
+        const success = await voice.start(state.users, state.userId);
+        if (success) {
+            state.users.forEach(u => {
+                if (u.id !== state.userId) {
+                    voice.connectToUser(u.id);
+                }
+            });
+        } else {
+            showToast("Microphone access denied. Voice chat disabled.", "error");
+        }
+    }
 }
