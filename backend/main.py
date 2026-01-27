@@ -82,7 +82,14 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, user_id: str):
 
             elif msg_type == MessageType.START_SHARING:
                 sharer_id, sharer_name = await manager.set_sharer(room_id, user_id)
-                await broadcast_sharer_changed(room_id, sharer_id, sharer_name)
+                if sharer_id == user_id:
+                    await broadcast_sharer_changed(room_id, sharer_id, sharer_name)
+                else:
+                    await manager.send_to_user(
+                        room_id,
+                        user_id,
+                        sharer_changed_message(sharer_id, sharer_name)
+                    )
 
             elif msg_type == MessageType.STOP_SHARING:
                 current_sharer, _ = await manager.get_sharer(room_id)

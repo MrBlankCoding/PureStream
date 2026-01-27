@@ -13,6 +13,8 @@ const shareScreenBtn = document.getElementById("share-screen-btn");
 const stopShareBtn = document.getElementById("stop-share-btn");
 const chatMessagesEl = document.getElementById("chat-messages");
 const callControls = document.getElementById("call-controls");
+const localPreview = document.getElementById("local-preview");
+const localPreviewVideo = document.getElementById("local-preview-video");
 
 export function renderUserList(users, sharerId, myUserId, voicePeers = new Map()) {
     userListEl.innerHTML = "";
@@ -90,20 +92,42 @@ export function updateVideoStage(hasVideo, sharerName) {
 
 export function setVideoSource(stream) {
     remoteVideo.srcObject = stream;
+    if (remoteVideo) {
+        remoteVideo.play?.().catch(() => { });
+    }
 }
 
 const statusMessage = document.getElementById("status-message");
 
-export function updateShareControls(isSharing) {
+export function updateShareControls(isSharing, canShare = true) {
     if (isSharing) {
         shareScreenBtn.classList.add("hidden");
         stopShareBtn.classList.remove("hidden");
         if (statusMessage) statusMessage.textContent = "You are currently sharing";
+        if (localPreview) localPreview.classList.remove("hidden");
     } else {
-        shareScreenBtn.classList.remove("hidden");
+        if (canShare) {
+            shareScreenBtn.classList.remove("hidden");
+            shareScreenBtn.disabled = false;
+            shareScreenBtn.classList.remove("opacity-50", "cursor-not-allowed");
+            if (statusMessage) statusMessage.textContent = "Waiting for someone to share...";
+        } else {
+            shareScreenBtn.classList.add("hidden");
+            shareScreenBtn.disabled = true;
+            shareScreenBtn.classList.add("opacity-50", "cursor-not-allowed");
+            if (statusMessage) statusMessage.textContent = "Someone else is sharing";
+        }
+
         stopShareBtn.classList.add("hidden");
-        if (statusMessage) statusMessage.textContent = "Waiting for someone to share...";
+        if (localPreview) localPreview.classList.add("hidden");
+        if (localPreviewVideo) localPreviewVideo.srcObject = null;
     }
+}
+
+export function setLocalPreviewSource(stream) {
+    if (!localPreviewVideo) return;
+    localPreviewVideo.srcObject = stream;
+    localPreviewVideo.play?.().catch(() => { });
 }
 
 export function showToast(msg, type = "info") {

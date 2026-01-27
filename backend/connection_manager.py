@@ -61,9 +61,20 @@ class ConnectionManager:
             if room_id not in self._rooms:
                 return None, None
             room = self._rooms[room_id]
-            room.sharer_id = user_id
-            if user_id and user_id in room.users:
-                return user_id, room.users[user_id].username
+
+            if user_id is not None:
+                if room.sharer_id is not None and room.sharer_id != user_id:
+                    current = room.sharer_id
+                    if current in room.users:
+                        return current, room.users[current].username
+                    return None, None
+
+                room.sharer_id = user_id
+                if user_id in room.users:
+                    return user_id, room.users[user_id].username
+                return None, None
+
+            room.sharer_id = None
             return None, None
 
     async def get_sharer(self, room_id: str) -> tuple[str | None, str | None]:

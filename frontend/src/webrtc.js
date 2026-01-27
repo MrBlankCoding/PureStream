@@ -30,14 +30,28 @@ export class WebRTCManager {
 
         this._localStream = await navigator.mediaDevices.getDisplayMedia({
             video: { frameRate: 60, cursor: "always" },
-            audio: { echoCancellation: false, noiseSuppression: false }
+            audio: false
         });
 
-        this._localStream.getVideoTracks()[0].onended = () => {
+        const videoTrack = this._localStream.getVideoTracks()[0];
+        if (!videoTrack) {
+            this.stopSharing();
+            throw new Error("No video track returned from screen capture");
+        }
+
+        videoTrack.onended = () => {
             this.stopSharing();
             if (this._onDisconnectCallback) {
                 this._onDisconnectCallback("local");
             }
+        };
+
+        videoTrack.onmute = () => {
+            console.warn("[webrtc] screen video track muted");
+        };
+
+        videoTrack.onunmute = () => {
+            console.warn("[webrtc] screen video track unmuted");
         };
 
         for (const user of userList) {
@@ -128,7 +142,8 @@ export class WebRTCManager {
                 e.receiver.playoutDelayHint = 0;
             }
             if (this._onTrackCallback) {
-                this._onTrackCallback(e.streams[0], remoteId);
+                const stream = e.streams?.[0] || new MediaStream([e.track]);
+                this._onTrackCallback(stream, remoteId);
             }
         };
 

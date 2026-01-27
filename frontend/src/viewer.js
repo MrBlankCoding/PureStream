@@ -9,6 +9,7 @@ import {
     updateShareControls,
     showToast,
     setVideoSource,
+    setLocalPreviewSource,
     updateVoiceControls,
     renderChat
 } from "./ui.js";
@@ -176,6 +177,9 @@ function initConnection() {
         state.setSharer(msg.sharerId, msg.sharerName);
         renderUserList(state.users, msg.sharerId, state.userId, state.voicePeers);
 
+        const someoneElseSharing = Boolean(msg.sharerId && msg.sharerId !== state.userId);
+        updateShareControls(state.isSharing, !someoneElseSharing);
+
         if (!msg.sharerId) {
             updateVideoStage(false, null);
         }
@@ -198,7 +202,7 @@ function initConnection() {
         if (id === "local") {
             ws.send({ type: "stop-sharing" });
             state.setIsSharing(false);
-            updateShareControls(false);
+            updateShareControls(false, state.sharerId ? state.sharerId === state.userId : true);
         }
     });
 
@@ -239,7 +243,13 @@ function initConnection() {
 
     async function startSharing() {
         try {
-            await rtc.startSharing(state.users, state.userId);
+            if (state.sharerId && state.sharerId !== state.userId) {
+                showToast("Someone else is sharing. They must stop before you can share.", "error");
+                updateShareControls(false, false);
+                return;
+            }
+            const stream = await rtc.startSharing(state.users, state.userId);
+            setLocalPreviewSource(stream);
             state.setIsSharing(true);
             updateShareControls(true);
             ws.send({ type: "start-sharing" });
