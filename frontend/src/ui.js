@@ -11,6 +11,8 @@ const sharerBanner = document.getElementById("sharer-banner");
 const sharerNameDisplay = document.getElementById("sharer-name-display");
 const shareScreenBtn = document.getElementById("share-screen-btn");
 const stopShareBtn = document.getElementById("stop-share-btn");
+const chatMessagesEl = document.getElementById("chat-messages");
+const callControls = document.getElementById("call-controls");
 
 export function renderUserList(users, sharerId, myUserId, voicePeers = new Map()) {
     userListEl.innerHTML = "";
@@ -42,6 +44,9 @@ export function renderUserList(users, sharerId, myUserId, voicePeers = new Map()
         const speakerIcon = voiceState.deafened
             ? '<i data-lucide="volume-off" class="w-3.5 h-3.5 text-red-400"></i>'
             : '';
+        const callIcon = user.inCall
+            ? '<i data-lucide="phone" class="w-3.5 h-3.5 text-emerald-300"></i>'
+            : '';
 
         div.innerHTML = `
             <div class="relative">
@@ -57,6 +62,7 @@ export function renderUserList(users, sharerId, myUserId, voicePeers = new Map()
                 </div>
             </div>
             <div class="flex items-center gap-1">
+                ${callIcon}
                 ${micIcon}
                 ${speakerIcon}
             </div>
@@ -120,7 +126,13 @@ export function showToast(msg, type = "info") {
 const muteBtn = document.getElementById("mute-btn");
 const deafenBtn = document.getElementById("deafen-btn");
 
-export function updateVoiceControls(muted, deafened) {
+export function updateVoiceControls(muted, deafened, inCall = true) {
+    if (callControls) {
+        callControls.classList.toggle("hidden", !inCall);
+    }
+    if (!inCall) {
+        return;
+    }
     if (muteBtn) {
         const icon = muteBtn.querySelector("i");
         if (muted) {
@@ -146,4 +158,35 @@ export function updateVoiceControls(muted, deafened) {
         }
     }
     createIcons({ icons });
+}
+
+export function renderChat(messages, selfId) {
+    if (!chatMessagesEl) return;
+    chatMessagesEl.innerHTML = "";
+    messages.slice(-200).forEach(msg => {
+        const isMe = msg.userId === selfId;
+        const row = document.createElement("div");
+        row.className = "flex flex-col gap-1";
+        const header = document.createElement("div");
+        header.className = "flex items-center gap-2 text-xs text-slate-400";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = `${msg.username}${isMe ? " (You)" : ""}`;
+        const timeSpan = document.createElement("span");
+        const date = new Date(msg.timestamp * 1000);
+        timeSpan.textContent = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        header.appendChild(nameSpan);
+        header.appendChild(timeSpan);
+
+        const body = document.createElement("div");
+        body.className = twMerge(clsx(
+            "rounded-xl px-3 py-2 text-sm whitespace-pre-wrap break-words",
+            isMe ? "bg-blue-600/20 text-blue-100 border border-blue-500/40 self-end" : "bg-slate-800 text-slate-100 border border-slate-700"
+        ));
+        body.textContent = msg.text;
+
+        row.appendChild(header);
+        row.appendChild(body);
+        chatMessagesEl.appendChild(row);
+    });
+    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
 }

@@ -11,6 +11,9 @@ class MessageType(str, Enum):
     PONG = "pong"
     VOICE_SIGNAL = "voice-signal"
     VOICE_STATE = "voice-state"
+    CHAT = "chat"
+    CALL_STATE = "call-state"
+    CHAT_HISTORY = "chat-history"
 
 
 def user_list_message(users: list) -> dict:
@@ -48,10 +51,36 @@ def voice_signal_message(sender_id: str, data: dict) -> dict:
     }
 
 
-def voice_state_message(user_id: str, muted: bool, deafened: bool) -> dict:
+def voice_state_message(user_id: str, muted: bool, deafened: bool, in_call: bool | None = None) -> dict:
     return {
         "type": MessageType.VOICE_STATE,
         "userId": user_id,
         "muted": muted,
-        "deafened": deafened
+        "deafened": deafened,
+        "inCall": in_call
+    }
+
+
+def chat_message(user_id: str, username: str, text: str, timestamp: float) -> dict:
+    return {
+        "type": MessageType.CHAT,
+        "userId": user_id,
+        "username": username,
+        "text": text,
+        "timestamp": timestamp
+    }
+
+
+def call_state_message(user_id: str, in_call: bool) -> dict:
+    return {
+        "type": MessageType.CALL_STATE,
+        "userId": user_id,
+        "inCall": in_call
+    }
+
+
+def chat_history_message(messages: list[dict]) -> dict:
+    return {
+        "type": MessageType.CHAT_HISTORY,
+        "messages": messages
     }

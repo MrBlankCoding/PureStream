@@ -10,7 +10,9 @@ class AppState {
             isSharing: false,
             voiceMuted: false,
             voiceDeafened: false,
-            voicePeers: new Map()
+            voicePeers: new Map(),
+            inCall: false,
+            chat: []
         };
         this._listeners = new Set();
     }
@@ -25,6 +27,8 @@ class AppState {
     get voiceMuted() { return this._state.voiceMuted; }
     get voiceDeafened() { return this._state.voiceDeafened; }
     get voicePeers() { return this._state.voicePeers; }
+    get inCall() { return this._state.inCall; }
+    get chat() { return this._state.chat; }
 
     setUsername(name) {
         this._state.username = name;
@@ -64,6 +68,21 @@ class AppState {
 
     setVoicePeerState(userId, muted, deafened) {
         this._state.voicePeers.set(userId, { muted, deafened });
+        this._notify();
+    }
+
+    setInCall(inCall) {
+        this._state.inCall = inCall;
+        this._notify();
+    }
+
+    setChatHistory(messages) {
+        this._state.chat = messages;
+        this._notify();
+    }
+
+    appendChatMessage(message) {
+        this._state.chat = [...this._state.chat, message].slice(-200);
         this._notify();
     }
 

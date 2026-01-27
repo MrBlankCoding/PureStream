@@ -2,7 +2,6 @@ import asyncio
 import json
 import time
 from dataclasses import dataclass, field
-from typing import Any
 from fastapi import WebSocket
 
 
@@ -17,12 +16,14 @@ class User:
     last_heartbeat: float = field(default_factory=time.time)
     muted: bool = False
     deafened: bool = False
+    in_call: bool = False
 
 
 @dataclass
 class Room:
     users: dict[str, User] = field(default_factory=dict)
     sharer_id: str | None = None
+    chat: list[dict] = field(default_factory=list)
 
 
 class ConnectionManager:
@@ -89,7 +90,13 @@ class ConnectionManager:
             if room_id not in self._rooms:
                 return []
             return [
-                {"id": uid, "username": u.username, "muted": u.muted, "deafened": u.deafened}
+                {
+                    "id": uid,
+                    "username": u.username,
+                    "muted": u.muted,
+                    "deafened": u.deafened,
+                    "inCall": u.in_call,
+                }
                 for uid, u in self._rooms[room_id].users.items()
             ]
 
@@ -101,6 +108,30 @@ class ConnectionManager:
                 user.deafened = deafened
                 return True
             return False
+
+    async def update_call_state(self, room_id: str, user_id: str, in_call: bool) -> bool:
+        async with self._lock:
+            if room_id in self._rooms and user_id in self._rooms[room_id].users:
+                self._rooms[room_id].users[user_id].in_call = in_call
+                return True
+            return False
+
+    async def add_chat_message(self, room_id: str, message: dict) -> list[dict]:
+        async with self._lock:
+            if room_id not in self._rooms:
+                return []
+            room = self._rooms[room_id]
+            room.chat.append(message)
+            # keep only recent messages to bound memory
+            if len(room.chat) > 200:
+                room.chat = room.chat[-200:]
+            return list(room.chat)
+
+    async def get_chat_history(self, room_id: str) -> list[dict]:
+        async with self._lock:
+            if room_id not in self._rooms:
+                return []
+            return list(self._rooms[room_id].chat)
 
     async def broadcast(self, room_id: str, message: dict, exclude_id: str | None = None) -> None:
         async with self._lock:
@@ -142,7 +173,7 @@ class ConnectionManager:
     async def _safe_send(self, ws: WebSocket, message: str) -> None:
         try:
             await ws.send_text(message)
-        except:
+        except Exception:
             pass
 
     def room_exists(self, room_id: str) -> bool:

@@ -1,6 +1,7 @@
 import uuid
 import json
 import asyncio
+import time
 from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
@@ -14,7 +15,10 @@ from message_types import (
     signal_message,
     pong_message,
     voice_signal_message,
-    voice_state_message
+    voice_state_message,
+    chat_message,
+    chat_history_message,
+    call_state_message
 )
 
 
@@ -56,6 +60,9 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, user_id: str):
                 username = message.get("username", "Anonymous")
                 await manager.update_username(room_id, user_id, username)
                 await broadcast_user_list(room_id)
+                history = await manager.get_chat_history(room_id)
+                if history:
+                    await manager.send_to_user(room_id, user_id, chat_history_message(history))
                 sharer_id, sharer_name = await manager.get_sharer(room_id)
                 if sharer_id:
                     await manager.send_to_user(
@@ -105,6 +112,23 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, user_id: str):
                     voice_state_message(user_id, muted, deafened),
                     exclude_id=user_id
                 )
+
+            elif msg_type == MessageType.CALL_STATE:
+                in_call = message.get("inCall", False)
+                updated = await manager.update_call_state(room_id, user_id, in_call)
+                if updated:
+                    await manager.broadcast(room_id, call_state_message(user_id, in_call), exclude_id=None)
+                    # keep user list in sync for late joiners
+                    await broadcast_user_list(room_id)
+
+            elif msg_type == MessageType.CHAT:
+                text = (message.get("text") or "").strip()
+                if text:
+                    username = message.get("username") or "Anonymous"
+                    ts = time.time()
+                    msg = chat_message(user_id, username, text[:400], ts)
+                    await manager.add_chat_message(room_id, msg)
+                    await manager.broadcast(room_id, msg)
 
     except WebSocketDisconnect:
         pass
