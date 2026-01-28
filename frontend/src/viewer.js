@@ -1,7 +1,7 @@
 import "./styles.css";
 import { state } from "./state.js";
 import { ws } from "./websocket.js";
-import { rtc } from "./webrtc.js";
+import { rtc } from "./webrtc/index.js";
 import { voice } from "./voicechat.js";
 import {
     renderUserList,
@@ -161,6 +161,8 @@ function initConnection() {
         });
         renderUserList(msg.users, state.sharerId, state.userId, state.voicePeers);
 
+        // If I'm the sharer, I must initiate WebRTC connections to everyone else.
+        // Viewers do not initiate offers for screen share.
         if (state.isSharing) {
             msg.users.forEach(u => {
                 if (u.id !== state.userId) {
@@ -168,6 +170,7 @@ function initConnection() {
                 }
             });
         }
+
         if (voice.isActive) {
             msg.users.filter(u => u.inCall && u.id !== state.userId).forEach(u => voice.connectToUser(u.id));
         }
@@ -180,7 +183,9 @@ function initConnection() {
         const someoneElseSharing = Boolean(msg.sharerId && msg.sharerId !== state.userId);
         updateShareControls(state.isSharing, !someoneElseSharing);
 
-        if (!msg.sharerId) {
+        if (msg.sharerId && msg.sharerId !== state.userId) {
+            rtc.connectToSharer(msg.sharerId);
+        } else if (!msg.sharerId) {
             updateVideoStage(false, null);
         }
     });
@@ -253,6 +258,13 @@ function initConnection() {
             state.setIsSharing(true);
             updateShareControls(true);
             ws.send({ type: "start-sharing" });
+
+            // Initiate connections to everyone currently in the room.
+            state.users.forEach(u => {
+                if (u.id !== state.userId) {
+                    rtc.connectToNewUser(u.id);
+                }
+            });
         } catch (err) {
             showToast("Failed to start share: " + err.message, "error");
         }

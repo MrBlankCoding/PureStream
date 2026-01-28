@@ -93,7 +93,18 @@ export function updateVideoStage(hasVideo, sharerName) {
 export function setVideoSource(stream) {
     remoteVideo.srcObject = stream;
     if (remoteVideo) {
-        remoteVideo.play?.().catch(() => { });
+        remoteVideo.style.display = 'block';
+        const playVideo = () => {
+            remoteVideo.play().catch(err => {
+                console.warn('[ui] Failed to play remote video:', err);
+            });
+        };
+        
+        if (remoteVideo.readyState >= 1) {
+            playVideo();
+        } else {
+            remoteVideo.addEventListener('loadedmetadata', playVideo, { once: true });
+        }
     }
 }
 
