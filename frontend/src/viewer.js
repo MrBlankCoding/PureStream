@@ -18,6 +18,12 @@ import { createIcons, icons } from "lucide/dist/cjs/lucide.js";
 createIcons({ icons });
 
 const copyRoomIdBtn = document.getElementById("copy-room-id");
+const sidebar = document.getElementById("sidebar");
+const chatSidebar = document.getElementById("chat-sidebar");
+const mobileParticipantsBtn = document.getElementById("mobile-participants-btn");
+const mobileChatBtn = document.getElementById("mobile-chat-btn");
+const closeSidebarBtn = document.getElementById("close-sidebar-btn");
+const closeChatBtn = document.getElementById("close-chat-btn");
 const leaveBtn = document.getElementById("leave-btn");
 const shareScreenBtn = document.getElementById("share-screen-btn");
 const stopShareBtn = document.getElementById("stop-share-btn");
@@ -58,6 +64,26 @@ window.addEventListener("beforeunload", () => {
     voice.stop();
     ws.disconnect();
 });
+
+// Mobile Toggles
+mobileParticipantsBtn.onclick = () => {
+    sidebar.classList.remove("-translate-x-full");
+    chatSidebar.classList.add("translate-x-full"); // Close other
+};
+
+mobileChatBtn.onclick = () => {
+    chatSidebar.classList.remove("translate-x-full");
+    sidebar.classList.add("-translate-x-full"); // Close other
+    // Clear notification dot if implemented
+};
+
+closeSidebarBtn.onclick = () => {
+    sidebar.classList.add("-translate-x-full");
+};
+
+closeChatBtn.onclick = () => {
+    chatSidebar.classList.add("translate-x-full");
+};
 
 fullscreenBtn.onclick = toggleFullscreen;
 
