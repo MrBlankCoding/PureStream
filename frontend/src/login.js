@@ -15,12 +15,18 @@ if (urlRoom) {
     roomCodeInput.value = urlRoom;
 }
 
+const savedUsername = localStorage.getItem("purestream_username");
+if (savedUsername) {
+    usernameInput.value = savedUsername;
+}
+
 createRoomBtn.onclick = async () => {
     const username = usernameInput.value.trim();
     if (!username) {
         showToast("Please enter a username", "error");
         return;
     }
+    localStorage.setItem("purestream_username", username);
 
     try {
         const res = await fetch("/new-room");
@@ -38,6 +44,7 @@ joinRoomBtn.onclick = () => {
         showToast("Please enter a username", "error");
         return;
     }
+    localStorage.setItem("purestream_username", username);
 
     const code = roomCodeInput.value.trim();
     if (!code) {

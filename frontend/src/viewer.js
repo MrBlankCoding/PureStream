@@ -169,8 +169,9 @@ document.addEventListener("fullscreenchange", () => {
 });
 
 copyRoomIdBtn.onclick = () => {
-    navigator.clipboard.writeText(state.roomId);
-    showToast("Room ID copied!");
+    const url = `${window.location.origin}/?room=${state.roomId}`;
+    navigator.clipboard.writeText(url);
+    showToast("Room Link copied!");
 };
 
 function initConnection() {
