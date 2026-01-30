@@ -14,29 +14,29 @@ import {
     renderChat,
     setConnecting
 } from "./ui.js";
-import { createIcons, icons } from "lucide/dist/cjs/lucide.js";
+import { createIcons, icons } from "lucide";
 
 createIcons({ icons });
 
-let connectionTimeout = null;
+let connectionTimeout: ReturnType<typeof setTimeout> | null = null;
 
-const copyRoomIdBtn = document.getElementById("copy-room-id");
-const sidebar = document.getElementById("sidebar");
-const chatSidebar = document.getElementById("chat-sidebar");
-const mobileParticipantsBtn = document.getElementById("mobile-participants-btn");
-const mobileChatBtn = document.getElementById("mobile-chat-btn");
-const closeSidebarBtn = document.getElementById("close-sidebar-btn");
-const closeChatBtn = document.getElementById("close-chat-btn");
-const leaveBtn = document.getElementById("leave-btn");
-const shareScreenBtn = document.getElementById("share-screen-btn");
-const stopShareBtn = document.getElementById("stop-share-btn");
-const fullscreenBtn = document.getElementById("fullscreen-btn");
-const muteBtn = document.getElementById("mute-btn");
-const deafenBtn = document.getElementById("deafen-btn");
-const videoStage = document.getElementById("video-stage");
-const joinCallBtn = document.getElementById("join-call-btn");
-const chatForm = document.getElementById("chat-form");
-const chatInput = document.getElementById("chat-input");
+const copyRoomIdBtn = document.getElementById("copy-room-id") as HTMLButtonElement;
+const sidebar = document.getElementById("sidebar") as HTMLElement;
+const chatSidebar = document.getElementById("chat-sidebar") as HTMLElement;
+const mobileParticipantsBtn = document.getElementById("mobile-participants-btn") as HTMLButtonElement;
+const mobileChatBtn = document.getElementById("mobile-chat-btn") as HTMLButtonElement;
+const closeSidebarBtn = document.getElementById("close-sidebar-btn") as HTMLButtonElement;
+const closeChatBtn = document.getElementById("close-chat-btn") as HTMLButtonElement;
+const leaveBtn = document.getElementById("leave-btn") as HTMLButtonElement;
+const shareScreenBtn = document.getElementById("share-screen-btn") as HTMLButtonElement;
+const stopShareBtn = document.getElementById("stop-share-btn") as HTMLButtonElement;
+const fullscreenBtn = document.getElementById("fullscreen-btn") as HTMLButtonElement;
+const muteBtn = document.getElementById("mute-btn") as HTMLButtonElement;
+const deafenBtn = document.getElementById("deafen-btn") as HTMLButtonElement;
+const videoStage = document.getElementById("video-stage") as HTMLElement;
+const joinCallBtn = document.getElementById("join-call-btn") as HTMLButtonElement;
+const chatForm = document.getElementById("chat-form") as HTMLFormElement;
+const chatInput = document.getElementById("chat-input") as HTMLInputElement;
 const urlParams = new URLSearchParams(window.location.search);
 const roomId = urlParams.get("room");
 const username = urlParams.get("username");
@@ -47,12 +47,18 @@ if (!roomId || !username) {
     initViewer(roomId, username);
 }
 
-function initViewer(roomId, username) {
+function initViewer(roomId: string, username: string) {
     state.setUsername(username);
     state.setRoomId(roomId);
-    document.getElementById("room-id-display").textContent = roomId;
-    document.getElementById("my-username").textContent = username;
-    document.getElementById("my-avatar").textContent = username.charAt(0).toUpperCase();
+
+    const roomIdDisplay = document.getElementById("room-id-display");
+    if (roomIdDisplay) roomIdDisplay.textContent = roomId;
+
+    const myUsernameDisplay = document.getElementById("my-username");
+    if (myUsernameDisplay) myUsernameDisplay.textContent = username;
+
+    const myAvatar = document.getElementById("my-avatar");
+    if (myAvatar) myAvatar.textContent = username.charAt(0).toUpperCase();
 
     initConnection();
 }
@@ -68,16 +74,14 @@ window.addEventListener("beforeunload", () => {
     ws.disconnect();
 });
 
-// Mobile Toggles
 mobileParticipantsBtn.onclick = () => {
     sidebar.classList.remove("-translate-x-full");
-    chatSidebar.classList.add("translate-x-full"); // Close other
+    chatSidebar.classList.add("translate-x-full");
 };
 
 mobileChatBtn.onclick = () => {
     chatSidebar.classList.remove("translate-x-full");
-    sidebar.classList.add("-translate-x-full"); // Close other
-    // Clear notification dot if implemented
+    sidebar.classList.add("-translate-x-full");
 };
 
 closeSidebarBtn.onclick = () => {
@@ -89,7 +93,6 @@ closeChatBtn.onclick = () => {
 };
 
 fullscreenBtn.onclick = toggleFullscreen;
-
 muteBtn.onclick = toggleMute;
 deafenBtn.onclick = toggleDeafen;
 joinCallBtn.onclick = toggleCall;
@@ -121,9 +124,14 @@ async function toggleCall() {
         renderUserList(state.users, state.sharerId, state.userId, state.voicePeers);
         joinCallBtn.classList.remove("bg-red-600", "hover:bg-red-700");
         joinCallBtn.classList.add("bg-emerald-600", "hover:bg-emerald-700");
-        joinCallBtn.querySelector("span")?.classList.remove("md:inline");
-        joinCallBtn.querySelector("span")?.classList.add("md:inline");
-        joinCallBtn.querySelector("span").textContent = "Join Call";
+
+        const joinSpan = joinCallBtn.querySelector("span");
+        if (joinSpan) {
+            joinSpan.classList.remove("md:inline");
+            joinSpan.classList.add("md:inline");
+            joinSpan.textContent = "Join Call";
+        }
+
         joinCallBtn.querySelector("i")?.setAttribute("data-lucide", "phone-call");
         createIcons({ icons, nameAttr: 'data-lucide', attrs: { class: "w-4 h-4 md:w-5 md:h-5" } });
         return;
@@ -136,7 +144,10 @@ async function toggleCall() {
         updateVoiceControls(state.voiceMuted, state.voiceDeafened, true);
         joinCallBtn.classList.remove("bg-emerald-600", "hover:bg-emerald-700");
         joinCallBtn.classList.add("bg-red-600", "hover:bg-red-700");
-        joinCallBtn.querySelector("span").textContent = "Leave Call";
+
+        const joinSpan = joinCallBtn.querySelector("span");
+        if (joinSpan) joinSpan.textContent = "Leave Call";
+
         joinCallBtn.querySelector("i")?.setAttribute("data-lucide", "phone-off");
         createIcons({ icons, nameAttr: 'data-lucide', attrs: { class: "w-4 h-4 md:w-5 md:h-5" } });
         state.users.forEach(u => {
@@ -161,6 +172,8 @@ function toggleFullscreen() {
 
 document.addEventListener("fullscreenchange", () => {
     const icon = fullscreenBtn.querySelector("i");
+    if (!icon) return;
+
     if (document.fullscreenElement) {
         icon.setAttribute("data-lucide", "minimize");
         fullscreenBtn.title = "Exit Fullscreen";
@@ -172,6 +185,7 @@ document.addEventListener("fullscreenchange", () => {
 });
 
 copyRoomIdBtn.onclick = () => {
+    if (!state.roomId) return;
     const url = `${window.location.origin}/?room=${state.roomId}`;
     navigator.clipboard.writeText(url);
     showToast("Room Link copied!");
@@ -182,31 +196,21 @@ function initConnection() {
         ws.send({ type: "join", username: state.username });
     });
 
-    ws.on("user-list", (msg) => {
+    ws.on("user-list", (msg: any) => {
         state.setUsers(msg.users);
-        msg.users.forEach(u => {
+        msg.users.forEach((u: any) => {
             if (u.id !== state.userId) {
                 state.setVoicePeerState(u.id, u.muted, u.deafened);
             }
         });
         renderUserList(msg.users, state.sharerId, state.userId, state.voicePeers);
 
-        // If I'm the sharer, I must initiate WebRTC connections to everyone else.
-        // Viewers do not initiate offers for screen share.
-        if (state.isSharing) {
-            msg.users.forEach(u => {
-                if (u.id !== state.userId) {
-                    rtc.connectToNewUser(u.id);
-                }
-            });
-        }
-
         if (voice.isActive) {
-            msg.users.filter(u => u.inCall && u.id !== state.userId).forEach(u => voice.connectToUser(u.id));
+            msg.users.filter((u: any) => u.inCall && u.id !== state.userId).forEach((u: any) => voice.connectToUser(u.id));
         }
     });
 
-    ws.on("sharer-changed", (msg) => {
+    ws.on("sharer-changed", (msg: any) => {
         state.setSharer(msg.sharerId, msg.sharerName);
         renderUserList(state.users, msg.sharerId, state.userId, state.voicePeers);
 
@@ -218,12 +222,11 @@ function initConnection() {
         if (msg.sharerId && msg.sharerId !== state.userId) {
             setConnecting(true);
             rtc.connectToSharer(msg.sharerId);
-            
-            // Watchdog: If no connection/video after 2s, request offer
+
             connectionTimeout = setTimeout(() => {
                 const peerState = rtc.getPeerState(msg.sharerId);
                 console.log("[viewer] Connection watchdog check. State:", peerState);
-                if (peerState !== "connected" && peerState !== "completed") {
+                if (peerState !== "connected" && peerState !== "completed" as string) {
                     console.log("[viewer] Requesting offer from sharer:", msg.sharerId);
                     ws.send({
                         type: "signal",
@@ -241,7 +244,7 @@ function initConnection() {
         }
     });
 
-    ws.on("signal", async (msg) => {
+    ws.on("signal", async (msg: any) => {
         await rtc.handleSignal(msg.sender, msg.data);
     });
 
@@ -249,7 +252,7 @@ function initConnection() {
         showToast("Connection lost, reconnecting...", "error");
     });
 
-    rtc.setOnTrack((stream, senderId) => {
+    rtc.setOnTrack((stream, _senderId) => {
         if (connectionTimeout) clearTimeout(connectionTimeout);
         setConnecting(false);
         setVideoSource(stream);
@@ -261,47 +264,45 @@ function initConnection() {
             ws.send({ type: "stop-sharing" });
             state.setIsSharing(false);
             updateShareControls(false, state.sharerId ? state.sharerId === state.userId : true);
-        } else {
-            // If a remote peer disconnects while we are sharing, try to reconnect
-            if (state.isSharing) {
-                const user = state.users.find(u => u.id === id);
-                if (user) {
-                    console.log("[viewer] Reconnecting to user in 2s:", id);
-                    setTimeout(() => {
-                        if (state.isSharing && state.users.find(u => u.id === id)) {
-                            rtc.connectToNewUser(id);
-                        }
-                    }, 2000);
-                }
-            }
+        } else if (id === "remote") {
+            // Remote sharer stopped or track ended: clear UI
+            state.setIsSharing(false);
+            updateShareControls(false, state.sharerId ? state.sharerId === state.userId : true);
+            updateVideoStage(false, null);
+            setVideoSource(null);
         }
     });
 
-    ws.on("voice-signal", async (msg) => {
+    ws.on("voice-signal", async (msg: any) => {
         await voice.handleSignal(msg.sender, msg.data);
     });
 
-    ws.on("voice-state", (msg) => {
+    ws.on("voice-state", (msg: any) => {
         state.setVoicePeerState(msg.userId, msg.muted, msg.deafened);
         renderUserList(state.users, state.sharerId, state.userId, state.voicePeers);
     });
 
-    ws.on("call-state", (msg) => {
+    ws.on("call-state", (msg: any) => {
         const updated = state.users.map(u => u.id === msg.userId ? { ...u, inCall: msg.inCall } : u);
         state.setUsers(updated);
+
         if (msg.userId === state.userId) {
             state.setInCall(msg.inCall);
             updateVoiceControls(state.voiceMuted, state.voiceDeafened, msg.inCall);
+        } else if (state.inCall && msg.inCall) {
+            console.log("[viewer] User joined call, checking connection:", msg.userId);
+            voice.connectToUser(msg.userId);
         }
+
         renderUserList(state.users, state.sharerId, state.userId, state.voicePeers);
     });
 
-    ws.on("chat", (msg) => {
+    ws.on("chat", (msg: any) => {
         state.appendChatMessage(msg);
         renderChat(state.chat, state.userId);
     });
 
-    ws.on("chat-history", (msg) => {
+    ws.on("chat-history", (msg: any) => {
         state.setChatHistory(msg.messages || []);
         renderChat(state.chat, state.userId);
     });
@@ -324,13 +325,6 @@ function initConnection() {
             state.setIsSharing(true);
             updateShareControls(true);
             ws.send({ type: "start-sharing" });
-
-            // Initiate connections to everyone currently in the room.
-            state.users.forEach(u => {
-                if (u.id !== state.userId) {
-                    rtc.connectToNewUser(u.id);
-                }
-            });
         } catch (err) {
             showToast("Failed to start share: " + err.message, "error");
         }
@@ -346,7 +340,7 @@ function initConnection() {
     shareScreenBtn.onclick = startSharing;
     stopShareBtn.onclick = stopSharing;
 
-    ws.connect(state.roomId, state.userId);
+    ws.connect(state.roomId!, state.userId);
 
     chatForm?.addEventListener("submit", (e) => {
         e.preventDefault();

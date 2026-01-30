@@ -1,8 +1,8 @@
-function isValidIceServer(server) {
+function isValidIceServer(server: any): boolean {
     return server && typeof server === "object" && server.urls;
 }
 
-async function fetchWithTimeout(url, ms = 5000) {
+async function fetchWithTimeout(url: string, ms = 5000): Promise<Response> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), ms);
 
@@ -13,10 +13,10 @@ async function fetchWithTimeout(url, ms = 5000) {
     }
 }
 
-export async function getIceServers() {
-    const env = (typeof import.meta !== "undefined" && import.meta.env)
+export async function getIceServers(): Promise<RTCIceServer[]> {
+    const env = ((typeof import.meta !== "undefined" && import.meta.env)
         ? import.meta.env
-        : {};
+        : {}) as any;
 
     const {
         VITE_METERED_API_KEY,
@@ -54,7 +54,7 @@ export async function getIceServers() {
 
     if (VITE_ICE_SERVERS) {
         try {
-            const parsed = JSON.parse(VITE_ICE_SERVERS);
+            const parsed = JSON.parse(VITE_ICE_SERVERS as string);
             const iceServers = Array.isArray(parsed)
                 ? parsed.filter(isValidIceServer)
                 : [];
@@ -70,16 +70,16 @@ export async function getIceServers() {
         }
     }
 
-    const servers = [
+    const servers: RTCIceServer[] = [
         { urls: "stun:stun.l.google.com:19302" },
         { urls: "stun:stun1.l.google.com:19302" }
     ];
 
     if (VITE_TURN_URL) {
         servers.push({
-            urls: VITE_TURN_URL,
-            username: VITE_TURN_USERNAME,
-            credential: VITE_TURN_CREDENTIAL
+            urls: VITE_TURN_URL as string,
+            username: VITE_TURN_USERNAME as string,
+            credential: VITE_TURN_CREDENTIAL as string
         });
 
         console.log("[webrtc] Added TURN server from env variables");

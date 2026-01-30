@@ -1,13 +1,24 @@
 import { ws } from "./websocket.js";
 
-const RTC_CONFIG = {
+const RTC_CONFIG: RTCConfiguration = {
     iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
         { urls: "stun:stun1.l.google.com:19302" }
     ]
 };
 
+type StateChangeCallback = (muted: boolean, deafened: boolean) => void;
+
 export class VoiceChatManager {
+    private _peers: Map<string, RTCPeerConnection>;
+    private _pendingCandidates: Map<string, RTCIceCandidateInit[]>;
+    private _localStream: MediaStream | null;
+    private _audioElements: Map<string, HTMLAudioElement>;
+    private _muted: boolean;
+    private _deafened: boolean;
+    private _onStateChange: StateChangeCallback | null;
+    private _myUserId: string | null;
+
     constructor() {
         this._peers = new Map();
         this._pendingCandidates = new Map();
@@ -16,13 +27,14 @@ export class VoiceChatManager {
         this._muted = false;
         this._deafened = false;
         this._onStateChange = null;
+        this._myUserId = null;
     }
 
-    setOnStateChange(callback) {
+    setOnStateChange(callback: StateChangeCallback): void {
         this._onStateChange = callback;
     }
 
-    async start(userList, myUserId) {
+    async start(userList: any[], myUserId: string): Promise<boolean> {
         this._myUserId = myUserId;
         try {
             this._localStream = await navigator.mediaDevices.getUserMedia({
@@ -46,7 +58,7 @@ export class VoiceChatManager {
         }
     }
 
-    stop() {
+    stop(): void {
         if (this._localStream) {
             this._localStream.getTracks().forEach(t => t.stop());
             this._localStream = null;
@@ -57,17 +69,19 @@ export class VoiceChatManager {
         this._myUserId = null;
     }
 
-    connectToUser(targetId) {
+    connectToUser(targetId: string): void {
         if (this._localStream && !this._peers.has(targetId)) {
-            if (this._myUserId > targetId) {
+            if (this._myUserId && this._myUserId > targetId) {
                 this._initiateConnection(targetId);
             }
         }
     }
 
-    async _initiateConnection(targetId) {
+    private async _initiateConnection(targetId: string): Promise<void> {
+        if (!this._localStream) return;
+
         const pc = this._createPeer(targetId);
-        this._localStream.getTracks().forEach(t => pc.addTrack(t, this._localStream));
+        this._localStream.getTracks().forEach(t => pc.addTrack(t, this._localStream!));
 
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
@@ -79,7 +93,7 @@ export class VoiceChatManager {
         });
     }
 
-    async handleSignal(senderId, data) {
+    async handleSignal(senderId: string, data: any): Promise<void> {
         if (data.type === "offer") {
             if (!this._localStream) return;
 
@@ -91,7 +105,7 @@ export class VoiceChatManager {
             }
             this._pendingCandidates.delete(senderId);
 
-            this._localStream.getTracks().forEach(t => pc.addTrack(t, this._localStream));
+            this._localStream.getTracks().forEach(t => pc.addTrack(t, this._localStream!));
 
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
@@ -122,20 +136,20 @@ export class VoiceChatManager {
                 if (!this._pendingCandidates.has(senderId)) {
                     this._pendingCandidates.set(senderId, []);
                 }
-                this._pendingCandidates.get(senderId).push(data.candidate);
+                this._pendingCandidates.get(senderId)!.push(data.candidate);
             }
         }
     }
 
-    _createPeer(remoteId) {
+    private _createPeer(remoteId: string): RTCPeerConnection {
         if (this._peers.has(remoteId)) {
-            this._peers.get(remoteId).close();
+            this._peers.get(remoteId)!.close();
         }
 
         const pc = new RTCPeerConnection(RTC_CONFIG);
         this._peers.set(remoteId, pc);
 
-        pc.onicecandidate = (e) => {
+        pc.onicecandidate = (e: RTCPeerConnectionIceEvent) => {
             if (e.candidate) {
                 ws.send({
                     type: "voice-signal",
@@ -145,7 +159,7 @@ export class VoiceChatManager {
             }
         };
 
-        pc.ontrack = (e) => {
+        pc.ontrack = (e: RTCTrackEvent) => {
             let audio = this._audioElements.get(remoteId);
             if (!audio) {
                 audio = document.createElement("audio");
@@ -167,7 +181,7 @@ export class VoiceChatManager {
         return pc;
     }
 
-    _removePeer(id) {
+    private _removePeer(id: string): void {
         const pc = this._peers.get(id);
         if (pc) {
             pc.close();
@@ -181,12 +195,12 @@ export class VoiceChatManager {
         }
     }
 
-    _closeAllPeers() {
+    private _closeAllPeers(): void {
         this._peers.forEach(pc => pc.close());
         this._peers.clear();
     }
 
-    setMuted(muted) {
+    setMuted(muted: boolean): void {
         this._muted = muted;
         if (this._localStream) {
             this._localStream.getAudioTracks().forEach(t => t.enabled = !muted);
@@ -194,13 +208,13 @@ export class VoiceChatManager {
         this._broadcastState();
     }
 
-    setDeafened(deafened) {
+    setDeafened(deafened: boolean): void {
         this._deafened = deafened;
         this._audioElements.forEach(audio => audio.muted = deafened);
         this._broadcastState();
     }
 
-    _broadcastState() {
+    private _broadcastState(): void {
         ws.send({
             type: "voice-state",
             muted: this._muted,
@@ -211,9 +225,9 @@ export class VoiceChatManager {
         }
     }
 
-    get isMuted() { return this._muted; }
-    get isDeafened() { return this._deafened; }
-    get isActive() { return this._localStream !== null; }
+    get isMuted(): boolean { return this._muted; }
+    get isDeafened(): boolean { return this._deafened; }
+    get isActive(): boolean { return this._localStream !== null; }
 }
 
 export const voice = new VoiceChatManager();

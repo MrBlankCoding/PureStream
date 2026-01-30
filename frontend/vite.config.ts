@@ -22,4 +22,10 @@ export default defineConfig({
       },
     },
   },
+  resolve: {
+    alias: {
+      // lucide's package.json points to a non-existent esm entry; use the cjs bundle
+      lucide: resolve(__dirname, 'node_modules/lucide/dist/cjs/lucide.js'),
+    },
+  },
 });

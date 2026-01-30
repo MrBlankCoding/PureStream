@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class MessageType(str, Enum):
     JOIN = "join"
     SIGNAL = "signal"
@@ -17,26 +18,15 @@ class MessageType(str, Enum):
 
 
 def user_list_message(users: list) -> dict:
-    return {
-        "type": MessageType.USER_LIST,
-        "users": users
-    }
+    return {"type": MessageType.USER_LIST, "users": users}
 
 
 def sharer_changed_message(sharer_id: str | None, sharer_name: str | None) -> dict:
-    return {
-        "type": MessageType.SHARER_CHANGED,
-        "sharerId": sharer_id,
-        "sharerName": sharer_name
-    }
+    return {"type": MessageType.SHARER_CHANGED, "sharerId": sharer_id, "sharerName": sharer_name}
 
 
 def signal_message(sender_id: str, data: dict) -> dict:
-    return {
-        "type": MessageType.SIGNAL,
-        "sender": sender_id,
-        "data": data
-    }
+    return {"type": MessageType.SIGNAL, "sender": sender_id, "data": data}
 
 
 def pong_message() -> dict:
@@ -44,43 +34,20 @@ def pong_message() -> dict:
 
 
 def voice_signal_message(sender_id: str, data: dict) -> dict:
-    return {
-        "type": MessageType.VOICE_SIGNAL,
-        "sender": sender_id,
-        "data": data
-    }
+    return {"type": MessageType.VOICE_SIGNAL, "sender": sender_id, "data": data}
 
 
 def voice_state_message(user_id: str, muted: bool, deafened: bool, in_call: bool | None = None) -> dict:
-    return {
-        "type": MessageType.VOICE_STATE,
-        "userId": user_id,
-        "muted": muted,
-        "deafened": deafened,
-        "inCall": in_call
-    }
+    return {"type": MessageType.VOICE_STATE, "userId": user_id, "muted": muted, "deafened": deafened, "inCall": in_call}
 
 
 def chat_message(user_id: str, username: str, text: str, timestamp: float) -> dict:
-    return {
-        "type": MessageType.CHAT,
-        "userId": user_id,
-        "username": username,
-        "text": text,
-        "timestamp": timestamp
-    }
+    return {"type": MessageType.CHAT, "userId": user_id, "username": username, "text": text, "timestamp": timestamp}
 
 
 def call_state_message(user_id: str, in_call: bool) -> dict:
-    return {
-        "type": MessageType.CALL_STATE,
-        "userId": user_id,
-        "inCall": in_call
-    }
+    return {"type": MessageType.CALL_STATE, "userId": user_id, "inCall": in_call}
 
 
 def chat_history_message(messages: list[dict]) -> dict:
-    return {
-        "type": MessageType.CHAT_HISTORY,
-        "messages": messages
-    }
+    return {"type": MessageType.CHAT_HISTORY, "messages": messages}

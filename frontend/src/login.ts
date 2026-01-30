@@ -1,13 +1,13 @@
 import "./styles.css";
 import { showToast } from "./ui.js";
-import { createIcons, icons } from "lucide/dist/cjs/lucide.js";
+import { createIcons, icons } from "lucide";
 
 createIcons({ icons });
 
-const usernameInput = document.getElementById("username-input");
-const roomCodeInput = document.getElementById("room-code-input");
-const createRoomBtn = document.getElementById("create-room-btn");
-const joinRoomBtn = document.getElementById("join-room-btn");
+const usernameInput = document.getElementById("username-input") as HTMLInputElement;
+const roomCodeInput = document.getElementById("room-code-input") as HTMLInputElement;
+const createRoomBtn = document.getElementById("create-room-btn") as HTMLButtonElement;
+const joinRoomBtn = document.getElementById("join-room-btn") as HTMLButtonElement;
 
 const urlParams = new URLSearchParams(window.location.search);
 const urlRoom = urlParams.get("room");
@@ -54,6 +54,6 @@ joinRoomBtn.onclick = () => {
     enterRoom(code, username);
 };
 
-function enterRoom(roomId, username) {
+function enterRoom(roomId: string, username: string): void {
     window.location.href = `/viewer.html?room=${roomId}&username=${encodeURIComponent(username)}`;
 }

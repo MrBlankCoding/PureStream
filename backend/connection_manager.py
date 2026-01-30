@@ -2,8 +2,8 @@ import asyncio
 import json
 import time
 from dataclasses import dataclass, field
-from fastapi import WebSocket
 
+from fastapi import WebSocket
 
 HEARTBEAT_INTERVAL = 10
 HEARTBEAT_TIMEOUT = 30
@@ -44,16 +44,16 @@ class ConnectionManager:
             room = self._rooms[room_id]
             if user_id not in room.users:
                 return False
-            
+
             del room.users[user_id]
-            
+
             was_sharer = room.sharer_id == user_id
             if was_sharer:
                 room.sharer_id = None
-            
+
             if not room.users:
                 del self._rooms[room_id]
-            
+
             return was_sharer
 
     async def set_sharer(self, room_id: str, user_id: str | None) -> tuple[str | None, str | None]:
@@ -176,7 +176,7 @@ class ConnectionManager:
                             room.sharer_id = None
                         del room.users[user_id]
                         removed.append((room_id, user_id, was_sharer))
-                
+
                 if not room.users:
                     del self._rooms[room_id]
         return removed

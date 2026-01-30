@@ -1,22 +1,23 @@
 import Toastify from "toastify-js";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { createIcons, icons } from "lucide/dist/cjs/lucide.js";
+import { createIcons, icons } from "lucide";
 
-const userListEl = document.getElementById("user-list");
-const emptyState = document.getElementById("empty-state");
-const remoteVideo = document.getElementById("remote-video");
+const userListEl = document.getElementById("user-list") as HTMLElement;
+const emptyState = document.getElementById("empty-state") as HTMLElement;
+const remoteVideo = document.getElementById("remote-video") as HTMLVideoElement;
 const streamTag = document.getElementById("stream-tag");
 const sharerBanner = document.getElementById("sharer-banner");
 const sharerNameDisplay = document.getElementById("sharer-name-display");
-const shareScreenBtn = document.getElementById("share-screen-btn");
-const stopShareBtn = document.getElementById("stop-share-btn");
-const chatMessagesEl = document.getElementById("chat-messages");
+const shareScreenBtn = document.getElementById("share-screen-btn") as HTMLButtonElement;
+const stopShareBtn = document.getElementById("stop-share-btn") as HTMLButtonElement;
+const chatMessagesEl = document.getElementById("chat-messages") as HTMLElement;
 const callControls = document.getElementById("call-controls");
 const localPreview = document.getElementById("local-preview");
-const localPreviewVideo = document.getElementById("local-preview-video");
+const localPreviewVideo = document.getElementById("local-preview-video") as HTMLVideoElement;
 
-export function renderUserList(users, sharerId, myUserId, voicePeers = new Map()) {
+export function renderUserList(users: any[], sharerId: string | null, myUserId: string, voicePeers = new Map()) {
+    if (!userListEl) return;
     userListEl.innerHTML = "";
 
     users.forEach(user => {
@@ -75,7 +76,7 @@ export function renderUserList(users, sharerId, myUserId, voicePeers = new Map()
     createIcons({ icons });
 }
 
-export function updateVideoStage(hasVideo, sharerName) {
+export function updateVideoStage(hasVideo: boolean, sharerName: string | null) {
     if (hasVideo && sharerName) {
         emptyState.classList.add("hidden");
         remoteVideo.classList.remove("hidden");
@@ -90,27 +91,33 @@ export function updateVideoStage(hasVideo, sharerName) {
     }
 }
 
-export function setVideoSource(stream) {
+export function setVideoSource(stream: MediaStream | null) {
+    if (!remoteVideo) return;
     remoteVideo.srcObject = stream;
-    if (remoteVideo) {
-        remoteVideo.style.display = 'block';
-        const playVideo = () => {
-            remoteVideo.play().catch(err => {
-                console.warn('[ui] Failed to play remote video:', err);
-            });
-        };
-        
-        if (remoteVideo.readyState >= 1) {
-            playVideo();
-        } else {
-            remoteVideo.addEventListener('loadedmetadata', playVideo, { once: true });
-        }
+    if (!stream) {
+        try { remoteVideo.pause(); } catch (e) { /* ignore */ }
+        remoteVideo.srcObject = null;
+        remoteVideo.style.display = 'none';
+        return;
+    }
+
+    remoteVideo.style.display = 'block';
+    const playVideo = () => {
+        remoteVideo.play().catch(err => {
+            console.warn('[ui] Failed to play remote video:', err);
+        });
+    };
+
+    if (remoteVideo.readyState >= 1) { // HAVE_METADATA
+        playVideo();
+    } else {
+        remoteVideo.addEventListener('loadedmetadata', playVideo, { once: true });
     }
 }
 
 const statusMessage = document.getElementById("status-message");
 
-export function setConnecting(isConnecting) {
+export function setConnecting(isConnecting: boolean) {
     if (statusMessage) {
         if (isConnecting) {
             statusMessage.innerHTML = `
@@ -121,11 +128,12 @@ export function setConnecting(isConnecting) {
             `;
             shareScreenBtn.classList.add("hidden");
         } else {
+            // keep empty?
         }
     }
 }
 
-export function updateShareControls(isSharing, canShare = true) {
+export function updateShareControls(isSharing: boolean, canShare = true) {
     if (isSharing) {
         shareScreenBtn.classList.add("hidden");
         stopShareBtn.classList.remove("hidden");
@@ -150,13 +158,13 @@ export function updateShareControls(isSharing, canShare = true) {
     }
 }
 
-export function setLocalPreviewSource(stream) {
+export function setLocalPreviewSource(stream: MediaStream) {
     if (!localPreviewVideo) return;
     localPreviewVideo.srcObject = stream;
     localPreviewVideo.play?.().catch(() => { });
 }
 
-export function showToast(msg, type = "info") {
+export function showToast(msg: string, type = "info") {
     const isError = type === "error";
     Toastify({
         text: msg,
@@ -176,7 +184,7 @@ export function showToast(msg, type = "info") {
 const muteBtn = document.getElementById("mute-btn");
 const deafenBtn = document.getElementById("deafen-btn");
 
-export function updateVoiceControls(muted, deafened, inCall = true) {
+export function updateVoiceControls(muted: boolean, deafened: boolean, inCall = true) {
     if (callControls) {
         callControls.classList.toggle("hidden", !inCall);
     }
@@ -210,7 +218,7 @@ export function updateVoiceControls(muted, deafened, inCall = true) {
     createIcons({ icons });
 }
 
-export function renderChat(messages, selfId) {
+export function renderChat(messages: any[], selfId: string) {
     if (!chatMessagesEl) return;
     chatMessagesEl.innerHTML = "";
     messages.slice(-200).forEach(msg => {

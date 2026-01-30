@@ -3,7 +3,7 @@ import { DEFAULT_CONFIG } from "./constants.js";
 export function optimizeSDP(sdp, maxBitrate = DEFAULT_CONFIG.maxBitrate) {
     let optimized = sdp;
     optimized = addBandwidthLimit(optimized, maxBitrate);
-    optimized = preferCodec(optimized, 'video', 'H264');
+    optimized = preferCodec(optimized, 'video', 'VP8');
 
     return optimized;
 }

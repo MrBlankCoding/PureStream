@@ -1,8 +1,24 @@
-import { ConnectionState } from "./constants.js";
+// import { ConnectionState } from "./constants.js";
 import { optimizeSDP, applyVideoEncoding } from "./utils.js";
 
+type SignalCallback = (id: string, data: any) => void;
+type TrackCallback = (stream: MediaStream, id: string) => void;
+type ConnectionStateCallback = (id: string, state: RTCPeerConnectionState) => void;
+
+interface PeerCallbacks {
+    onSignal: SignalCallback;
+    onTrack?: TrackCallback;
+    onConnectionStateChange?: ConnectionStateCallback;
+}
+
 export class Peer {
-    constructor(remoteId, rtcConfig, { onSignal, onTrack, onConnectionStateChange }) {
+    public id: string;
+    public pc: RTCPeerConnection;
+    public onSignal: SignalCallback;
+    public onTrack?: TrackCallback;
+    public onConnectionStateChange?: ConnectionStateCallback;
+
+    constructor(remoteId: string, rtcConfig: RTCConfiguration, { onSignal, onTrack, onConnectionStateChange }: PeerCallbacks) {
         this.id = remoteId;
         this.pc = new RTCPeerConnection(rtcConfig);
         this.onSignal = onSignal;
@@ -13,9 +29,9 @@ export class Peer {
         console.log("[webrtc] Created peer connection for:", remoteId);
     }
 
-    _setupEventHandlers() {
+    private _setupEventHandlers(): void {
         // ICE candidates
-        this.pc.onicecandidate = (event) => {
+        this.pc.onicecandidate = (event: RTCPeerConnectionIceEvent) => {
             if (event.candidate) {
                 this.onSignal(this.id, { candidate: event.candidate });
             } else {
@@ -33,10 +49,13 @@ export class Peer {
         };
 
         // Track received
-        this.pc.ontrack = (event) => {
+        this.pc.ontrack = (event: RTCTrackEvent) => {
             console.log("[webrtc] Received track:", event.track.kind, "from:", this.id);
-            if (event.receiver?.playoutDelayHint !== undefined) {
-                event.receiver.playoutDelayHint = 0;
+
+            // Fix playoutDelayHint type issue if needed, though standard types might not have it yet.
+            // Using type assertion if needed.
+            if ((event.receiver as any).playoutDelayHint !== undefined) {
+                (event.receiver as any).playoutDelayHint = 0;
             }
 
             event.track.enabled = true;
@@ -60,7 +79,7 @@ export class Peer {
         };
     }
 
-    addTrack(track, stream, maxBitrate) {
+    addTrack(track: MediaStreamTrack, stream: MediaStream, maxBitrate?: number): RTCRtpSender {
         const sender = this.pc.addTrack(track, stream);
         console.log("[webrtc] Added track to peer:", track.kind, "->", this.id);
 
@@ -70,35 +89,40 @@ export class Peer {
         return sender;
     }
 
-    async createOffer(startWithIceRestart = false) {
-        const options = {
+    async createOffer(startWithIceRestart = false): Promise<RTCSessionDescriptionInit> {
+        const options: RTCOfferOptions = {
             offerToReceiveAudio: false,
             offerToReceiveVideo: true,
             iceRestart: startWithIceRestart
         };
 
         const offer = await this.pc.createOffer(options);
-        offer.sdp = optimizeSDP(offer.sdp);
+        // Assuming optimizeSDP returns string
+        if (offer.sdp) {
+            offer.sdp = optimizeSDP(offer.sdp);
+        }
         await this.pc.setLocalDescription(offer);
         return offer;
     }
 
-    async createAnswer() {
+    async createAnswer(): Promise<RTCSessionDescriptionInit> {
         const answer = await this.pc.createAnswer();
-        answer.sdp = optimizeSDP(answer.sdp);
+        if (answer.sdp) {
+            answer.sdp = optimizeSDP(answer.sdp);
+        }
         await this.pc.setLocalDescription(answer);
         return answer;
     }
 
-    async setRemoteDescription(sdp) {
+    async setRemoteDescription(sdp: RTCSessionDescriptionInit): Promise<void> {
         await this.pc.setRemoteDescription(new RTCSessionDescription(sdp));
     }
 
-    async addIceCandidate(candidate) {
+    async addIceCandidate(candidate: RTCIceCandidateInit): Promise<void> {
         await this.pc.addIceCandidate(new RTCIceCandidate(candidate));
     }
 
-    async attemptIceRestart() {
+    async attemptIceRestart(): Promise<void> {
         try {
             console.log("[webrtc] Attempting ICE restart for:", this.id);
             const offer = await this.createOffer(true);
@@ -108,15 +132,15 @@ export class Peer {
         }
     }
 
-    getSenders() {
+    getSenders(): RTCRtpSender[] {
         return this.pc.getSenders();
     }
 
-    close() {
+    close(): void {
         this.pc.close();
     }
 
-    get connectionState() {
+    get connectionState(): RTCPeerConnectionState {
         return this.pc.connectionState;
     }
 }
