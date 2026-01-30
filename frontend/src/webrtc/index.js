@@ -110,6 +110,14 @@ export class WebRTCManager {
     async connectToNewUser(userId) {
         await this._ensureInitialized();
 
+        if (this._peers.has(userId)) {
+            const peer = this._peers.get(userId);
+            if (peer.connectionState === "failed" || peer.connectionState === "closed") {
+                console.log("[webrtc] Removing failed/closed peer before reconnect:", userId);
+                this._removePeer(userId);
+            }
+        }
+
         if (this._localStream && !this._peers.has(userId)) {
             console.log("[webrtc] Connecting to new user:", userId);
             await this._initiateConnection(userId);
@@ -151,6 +159,9 @@ export class WebRTCManager {
         } catch (error) {
             console.error("[webrtc] Failed to initiate connection:", error);
             this._removePeer(targetId);
+            if (this._onDisconnectCallback) {
+                this._onDisconnectCallback(targetId);
+            }
             throw error;
         }
     }
@@ -165,6 +176,11 @@ export class WebRTCManager {
                 await this._handleAnswer(senderId, data);
             } else if (data.candidate) {
                 await this._handleCandidate(senderId, data);
+            } else if (data.type === "request-offer") {
+                console.log("[webrtc] Received offer request from:", senderId);
+                if (this.isSharing) {
+                    await this.connectToNewUser(senderId);
+                }
             }
         } catch (error) {
             console.error("[webrtc] Error handling signal from", senderId, ":", error);

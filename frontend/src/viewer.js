@@ -11,11 +11,14 @@ import {
     setVideoSource,
     setLocalPreviewSource,
     updateVoiceControls,
-    renderChat
+    renderChat,
+    setConnecting
 } from "./ui.js";
 import { createIcons, icons } from "lucide/dist/cjs/lucide.js";
 
 createIcons({ icons });
+
+let connectionTimeout = null;
 
 const copyRoomIdBtn = document.getElementById("copy-room-id");
 const sidebar = document.getElementById("sidebar");
@@ -210,10 +213,31 @@ function initConnection() {
         const someoneElseSharing = Boolean(msg.sharerId && msg.sharerId !== state.userId);
         updateShareControls(state.isSharing, !someoneElseSharing);
 
+        if (connectionTimeout) clearTimeout(connectionTimeout);
+
         if (msg.sharerId && msg.sharerId !== state.userId) {
+            setConnecting(true);
             rtc.connectToSharer(msg.sharerId);
+            
+            // Watchdog: If no connection/video after 2s, request offer
+            connectionTimeout = setTimeout(() => {
+                const peerState = rtc.getPeerState(msg.sharerId);
+                console.log("[viewer] Connection watchdog check. State:", peerState);
+                if (peerState !== "connected" && peerState !== "completed") {
+                    console.log("[viewer] Requesting offer from sharer:", msg.sharerId);
+                    ws.send({
+                        type: "signal",
+                        target: msg.sharerId,
+                        data: { type: "request-offer" }
+                    });
+                }
+            }, 2000);
+
         } else if (!msg.sharerId) {
+            setConnecting(false);
             updateVideoStage(false, null);
+        } else {
+            setConnecting(false);
         }
     });
 
@@ -226,6 +250,8 @@ function initConnection() {
     });
 
     rtc.setOnTrack((stream, senderId) => {
+        if (connectionTimeout) clearTimeout(connectionTimeout);
+        setConnecting(false);
         setVideoSource(stream);
         updateVideoStage(true, state.sharerName || "Someone");
     });
@@ -235,6 +261,19 @@ function initConnection() {
             ws.send({ type: "stop-sharing" });
             state.setIsSharing(false);
             updateShareControls(false, state.sharerId ? state.sharerId === state.userId : true);
+        } else {
+            // If a remote peer disconnects while we are sharing, try to reconnect
+            if (state.isSharing) {
+                const user = state.users.find(u => u.id === id);
+                if (user) {
+                    console.log("[viewer] Reconnecting to user in 2s:", id);
+                    setTimeout(() => {
+                        if (state.isSharing && state.users.find(u => u.id === id)) {
+                            rtc.connectToNewUser(id);
+                        }
+                    }, 2000);
+                }
+            }
         }
     });
 

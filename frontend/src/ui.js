@@ -110,6 +110,21 @@ export function setVideoSource(stream) {
 
 const statusMessage = document.getElementById("status-message");
 
+export function setConnecting(isConnecting) {
+    if (statusMessage) {
+        if (isConnecting) {
+            statusMessage.innerHTML = `
+                <div class="flex items-center justify-center gap-2">
+                    <div class="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                    <span>Connecting to stream...</span>
+                </div>
+            `;
+            shareScreenBtn.classList.add("hidden");
+        } else {
+        }
+    }
+}
+
 export function updateShareControls(isSharing, canShare = true) {
     if (isSharing) {
         shareScreenBtn.classList.add("hidden");
