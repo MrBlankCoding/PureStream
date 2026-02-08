@@ -20,6 +20,10 @@ from message_types import (
     user_list_message,
     voice_signal_message,
     voice_state_message,
+    whiteboard_start_message,
+    whiteboard_stop_message,
+    whiteboard_update_message,
+    whiteboard_cursor_message,
 )
 from sfu import sfu
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -140,6 +144,37 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, user_id: str):
                     msg = chat_message(user_id, username, text[:400], ts)
                     await manager.add_chat_message(room_id, msg)
                     await manager.broadcast(room_id, msg)
+
+            elif msg_type == MessageType.WHITEBOARD_START:
+                # Optional: Check if someone else is already sharing screen or whiteboarding
+                # For now, we trust the clientstate, but we could enforce it here.
+                await manager.broadcast(room_id, whiteboard_start_message(user_id), exclude_id=user_id)
+
+            elif msg_type == MessageType.WHITEBOARD_STOP:
+                await manager.broadcast(room_id, whiteboard_stop_message(user_id), exclude_id=user_id)
+
+            elif msg_type == MessageType.WHITEBOARD_UPDATE:
+                data = message.get("data")
+                if data:
+                    await manager.broadcast(room_id, whiteboard_update_message(user_id, data), exclude_id=user_id)
+
+            elif msg_type == MessageType.WHITEBOARD_CURSOR:
+                data = message.get("data")
+                if data:
+                    # Get username from manager or message? Ideally manager has it.
+                    # check if we can get it from connection info, or just pass it through if client sends it.
+                    # Client sends it? `whiteboard.ts` sends data: {x,y}, no username. 
+                    # But `websocket_endpoint` knows `user_id`. `manager` likely knows `username`.
+                    # Let's fetch username from the session or manager if possible, or just Anonymous if not found.
+                    # Optimization: Just pass what's needed. frontend `whiteboard.ts` expects `username` in the event.
+                    # We can get it from manager.
+                    # For speed, let's trust the client if they sent it? No, client doesn't send it in `data`.
+                    # We should look it up.
+                    # But that's an async call `manager.get_username`.
+                    # Let's try to get it.
+                    username = await manager.get_username(room_id, user_id) or "Anonymous"
+                    await manager.broadcast(room_id, whiteboard_cursor_message(user_id, data, username), exclude_id=user_id)
+
 
     except WebSocketDisconnect:
         pass

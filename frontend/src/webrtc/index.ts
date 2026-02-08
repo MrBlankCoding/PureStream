@@ -15,59 +15,56 @@ interface WebRTCConfig {
 type TrackCallback = (stream: MediaStream, id: string) => void;
 type DisconnectCallback = (id: string) => void;
 
+type SignalMessage =
+    | { type: "answer"; sdp: string }
+    | { type: "candidate"; candidate: RTCIceCandidateInit };
+
 class WebRTCManager {
-    private _config: WebRTCConfig;
-    private _rtcConfig: RTCConfiguration | null;
-    private _localStream: MediaStream | null;
-    private _sfuConnection: RTCPeerConnection | null;
-    private _onTrackCallback: TrackCallback | null;
-    private _onDisconnectCallback: DisconnectCallback | null;
-    private _connectionState: ConnectionState;
+    private config: WebRTCConfig;
+    private rtcConfig?: RTCConfiguration;
+    private localStream?: MediaStream;
+    private pc?: RTCPeerConnection;
+    private onTrack?: TrackCallback;
+    private onDisconnect?: DisconnectCallback;
+    private connectionState: ConnectionState = ConnectionState.NEW;
 
     constructor(config: Partial<WebRTCConfig> = {}) {
-        this._config = { ...DEFAULT_CONFIG, ...config };
-        this._rtcConfig = null;
-        this._localStream = null;
-        this._sfuConnection = null;
-        this._onTrackCallback = null;
-        this._onDisconnectCallback = null;
-        this._connectionState = ConnectionState.NEW as ConnectionState;
+        this.config = { ...DEFAULT_CONFIG, ...config };
     }
 
-    async _ensureInitialized() {
-        if (!this._rtcConfig) {
+    private async ensureInitialized() {
+        if (!this.rtcConfig) {
             const iceServers = await getIceServers();
-            this._rtcConfig = {
+            this.rtcConfig = {
                 iceServers,
-                iceTransportPolicy: this._config.iceTransportPolicy,
-                iceCandidatePoolSize: this._config.iceCandidatePoolSize
+                iceTransportPolicy: this.config.iceTransportPolicy,
+                iceCandidatePoolSize: this.config.iceCandidatePoolSize
             };
         }
     }
 
     setOnTrack(callback: TrackCallback) {
-        this._onTrackCallback = callback;
+        this.onTrack = callback;
     }
 
     setOnDisconnect(callback: DisconnectCallback) {
-        this._onDisconnectCallback = callback;
+        this.onDisconnect = callback;
     }
 
-    async startSharing(_userList: any[], _myUserId: string): Promise<MediaStream> {
-        await this._ensureInitialized();
+    async startSharing(): Promise<MediaStream> {
+        await this.ensureInitialized();
 
-        // Check if getDisplayMedia is supported (with type guard/check)
-        if (!navigator.mediaDevices || !(navigator.mediaDevices as any).getDisplayMedia) {
-            throw new Error("Screen sharing not supported in this browser");
+        if (!navigator.mediaDevices?.getDisplayMedia) {
+            throw new Error("Screen sharing not supported");
         }
 
-        this._localStream = await (navigator.mediaDevices as any).getDisplayMedia({
+        this.localStream = await navigator.mediaDevices.getDisplayMedia({
             video: {
                 cursor: "always",
                 frameRate: { ideal: 30, max: 60 },
                 width: { ideal: 1920 },
                 height: { ideal: 1080 }
-            },
+            } as any,
             audio: {
                 echoCancellation: true,
                 noiseSuppression: true,
@@ -75,101 +72,69 @@ class WebRTCManager {
             }
         });
 
-        if (!this._localStream) throw new Error("Failed to get stream");
-
-        // Handle stream stop (user clicks "Stop sharing" in browser UI)
-        this._localStream.getTracks().forEach(track => {
-            track.onended = () => {
-                this.stopSharing();
-                if (this._onDisconnectCallback) this._onDisconnectCallback("local");
-            };
+        this.localStream.getTracks().forEach(track => {
+            track.onended = () => this.cleanup("local");
         });
 
-        // Connect to SFU as Publisher
-        await this._connectToSFU(true);
-
-        return this._localStream;
+        await this.connectToSFU(true);
+        return this.localStream;
     }
 
     stopSharing() {
-        if (this._localStream) {
-            this._localStream.getTracks().forEach(track => track.stop());
-            this._localStream = null;
-        }
-        if (this._sfuConnection) {
-            this._sfuConnection.close();
-            this._sfuConnection = null;
-        }
+        this.cleanup("local");
     }
 
-    // Connect to SFU (either as publisher or subscriber)
-    private async _connectToSFU(isPublisher: boolean) {
-        if (this._sfuConnection) {
-            this._sfuConnection.close();
-        }
+    private cleanup(source: "local" | "remote") {
+        this.localStream?.getTracks().forEach(t => t.stop());
+        this.localStream = undefined;
 
-        await this._ensureInitialized();
-        const pc = new RTCPeerConnection(this._rtcConfig!);
-        this._sfuConnection = pc;
+        this.pc?.close();
+        this.pc = undefined;
 
-        pc.onicecandidate = (event) => {
-            if (event.candidate) {
-                ws.send({
-                    type: "signal",
-                    target: "sfu",
-                    data: {
-                        type: "candidate",
-                        candidate: event.candidate.toJSON()
-                    }
-                });
+        this.onDisconnect?.(source);
+    }
+
+    private async connectToSFU(publish: boolean) {
+        await this.ensureInitialized();
+
+        this.pc?.close();
+        this.pc = new RTCPeerConnection(this.rtcConfig);
+
+        this.pc.onicecandidate = e => {
+            if (!e.candidate) return;
+            ws.send({
+                type: "signal",
+                target: "sfu",
+                data: { type: "candidate", candidate: e.candidate.toJSON() }
+            });
+        };
+
+        this.pc.onconnectionstatechange = () => {
+            this.connectionState = this.pc!.connectionState as ConnectionState;
+            if (["failed", "closed"].includes(this.pc!.connectionState)) {
+                this.cleanup("remote");
             }
         };
 
-        pc.onconnectionstatechange = () => {
-            console.log("[webrtc] SFU Connection State:", pc.connectionState);
-            this._connectionState = pc.connectionState as ConnectionState;
-            if (['failed', 'closed'].includes(pc.connectionState)) {
-                // handle disconnect logic if needed
-            }
+        this.pc.ontrack = e => {
+            this.onTrack?.(e.streams[0], "sfu");
+            e.track.onended = () => this.cleanup("remote");
         };
 
-        if (isPublisher && this._localStream) {
-            // Add tracks and apply encoder params for video senders
-            for (const track of this._localStream.getTracks()) {
-                const sender = pc.addTrack(track, this._localStream!);
-                if (track.kind === 'video') {
-                    // Apply bitrate and priority settings; don't block on it
-                    applyVideoEncoding(sender, this._config.maxBitrate).catch(() => { /* noop */ });
+        if (publish && this.localStream) {
+            for (const track of this.localStream.getTracks()) {
+                const sender = this.pc.addTrack(track, this.localStream);
+                if (track.kind === "video") {
+                    applyVideoEncoding(sender, this.config.maxBitrate).catch(() => { });
                 }
-                // Keep local track end handling close to the sender as well
-                track.onended = () => {
-                    this.stopSharing();
-                    if (this._onDisconnectCallback) this._onDisconnectCallback("local");
-                };
             }
         } else {
-            // Subscriber: Add transceiver to receive video/audio
-            pc.addTransceiver("video", { direction: "recvonly" });
-            pc.addTransceiver("audio", { direction: "recvonly" });
+            this.pc.addTransceiver("video", { direction: "recvonly" });
+            this.pc.addTransceiver("audio", { direction: "recvonly" });
         }
 
-        pc.ontrack = (event) => {
-            console.log("[webrtc] Track received:", event.track.kind);
-            if (this._onTrackCallback) {
-                this._onTrackCallback(event.streams[0], "sfu");
-            }
-
-            try {
-                event.track.onended = () => {
-                    if (this._onDisconnectCallback) this._onDisconnectCallback("remote");
-                };
-            } catch (e) {
-                // ignore
-            }
-        };
-
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
+        const offer = await this.pc.createOffer();
+        await this.pc.setLocalDescription(offer);
 
         ws.send({
             type: "signal",
@@ -177,31 +142,30 @@ class WebRTCManager {
             data: {
                 type: "offer",
                 sdp: offer.sdp,
-                intent: isPublisher ? "publish" : "subscribe"
+                intent: publish ? "publish" : "subscribe"
             }
         });
     }
 
-    // Called by viewer when a new sharer is announced
-    connectToSharer(_sharerId: string) {
-        // In P2P we connected to sharerId. In SFU, we connect to SFU.
-        this._connectToSFU(false);
+    connectToSharer() {
+        this.connectToSFU(false);
     }
 
-    async handleSignal(_senderId: string, data: any) {
-        if (!this._sfuConnection) return;
+    async handleSignal(_: string, data: SignalMessage) {
+        if (!this.pc) return;
 
         if (data.type === "answer") {
-            const answer = new RTCSessionDescription(data);
-            await this._sfuConnection.setRemoteDescription(answer);
-        } else if (data.candidate) {
-            const candidate = new RTCIceCandidate(data.candidate);
-            await this._sfuConnection.addIceCandidate(candidate);
+            await this.pc.setRemoteDescription({
+                type: "answer",
+                sdp: data.sdp
+            });
+        } else if ("candidate" in data) {
+            await this.pc.addIceCandidate(new RTCIceCandidate(data.candidate));
         }
     }
 
-    getPeerState(_remoteId: string): ConnectionState {
-        return this._connectionState;
+    getPeerState(): ConnectionState {
+        return this.connectionState;
     }
 }
 

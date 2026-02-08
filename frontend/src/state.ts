@@ -26,11 +26,13 @@ export interface ApplicationState {
     sharerId: string | null;
     sharerName: string | null;
     isSharing: boolean;
+    isWhiteboarding: boolean;
     voiceMuted: boolean;
     voiceDeafened: boolean;
     voicePeers: Map<string, VoicePeerState>;
     inCall: boolean;
     chat: ChatMessage[];
+    whiteboardData: any[] | null;
 }
 
 type StateListener = (state: ApplicationState) => void;
@@ -48,11 +50,13 @@ class AppState {
             sharerId: null,
             sharerName: null,
             isSharing: false,
+            isWhiteboarding: false,
             voiceMuted: false,
             voiceDeafened: false,
             voicePeers: new Map(),
             inCall: false,
-            chat: []
+            chat: [],
+            whiteboardData: null
         };
         this._listeners = new Set();
     }
@@ -69,6 +73,7 @@ class AppState {
     get voicePeers(): Map<string, VoicePeerState> { return this._state.voicePeers; }
     get inCall(): boolean { return this._state.inCall; }
     get chat(): ChatMessage[] { return this._state.chat; }
+    get whiteboardData(): any[] | null { return this._state.whiteboardData; }
 
     setUsername(name: string): void {
         this._state.username = name;
@@ -95,6 +100,12 @@ class AppState {
         this._state.isSharing = sharing;
         this._notify();
     }
+
+    setIsWhiteboarding(whiteboarding: boolean): void {
+        this._state.isWhiteboarding = whiteboarding;
+        this._notify();
+    }
+
 
     setVoiceMuted(muted: boolean): void {
         this._state.voiceMuted = muted;
@@ -123,6 +134,11 @@ class AppState {
 
     appendChatMessage(message: ChatMessage): void {
         this._state.chat = [...this._state.chat, message].slice(-200);
+        this._notify();
+    }
+
+    setWhiteboardData(data: any[] | null): void {
+        this._state.whiteboardData = data;
         this._notify();
     }
 

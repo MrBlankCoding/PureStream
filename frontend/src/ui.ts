@@ -2,19 +2,22 @@ import Toastify from "toastify-js";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { createIcons, icons } from "lucide";
+import { whiteboard } from "./whiteboard";
+import { state } from "./state";
 
 const userListEl = document.getElementById("user-list") as HTMLElement;
 const emptyState = document.getElementById("empty-state") as HTMLElement;
 const remoteVideo = document.getElementById("remote-video") as HTMLVideoElement;
-const streamTag = document.getElementById("stream-tag");
-const sharerBanner = document.getElementById("sharer-banner");
-const sharerNameDisplay = document.getElementById("sharer-name-display");
 const shareScreenBtn = document.getElementById("share-screen-btn") as HTMLButtonElement;
 const stopShareBtn = document.getElementById("stop-share-btn") as HTMLButtonElement;
 const chatMessagesEl = document.getElementById("chat-messages") as HTMLElement;
 const callControls = document.getElementById("call-controls");
 const localPreview = document.getElementById("local-preview");
 const localPreviewVideo = document.getElementById("local-preview-video") as HTMLVideoElement;
+const whiteboardContainer = document.getElementById("whiteboard-container");
+const startWhiteboardBtn = document.getElementById("start-whiteboard-btn") as HTMLButtonElement;
+const stopWhiteboardBtn = document.getElementById("stop-whiteboard-btn") as HTMLButtonElement;
+
 
 export function renderUserList(users: any[], sharerId: string | null, myUserId: string, voicePeers = new Map()) {
     if (!userListEl) return;
@@ -76,20 +79,26 @@ export function renderUserList(users: any[], sharerId: string | null, myUserId: 
     createIcons({ icons });
 }
 
-export function updateVideoStage(hasVideo: boolean, sharerName: string | null) {
-    if (hasVideo && sharerName) {
-        emptyState.classList.add("hidden");
+export function updateVideoStage(hasVideo: boolean, sharerName: string | null, isWhiteboarding: boolean = false) {
+    emptyState.classList.add("hidden");
+    remoteVideo.classList.add("hidden");
+    if (whiteboardContainer) whiteboardContainer.classList.add("hidden");
+    remoteVideo.pause();
+
+    if (isWhiteboarding) {
+        if (whiteboardContainer) {
+            whiteboardContainer.classList.remove("hidden");
+            void whiteboardContainer.offsetWidth;
+            whiteboard.init("whiteboard-container");
+        }
+    } else if (hasVideo && sharerName) {
         remoteVideo.classList.remove("hidden");
-        if (streamTag) streamTag.classList.remove("hidden");
-        if (sharerBanner) sharerBanner.classList.remove("hidden");
-        if (sharerNameDisplay) sharerNameDisplay.textContent = sharerName;
+        remoteVideo.play().catch(() => { });
     } else {
         emptyState.classList.remove("hidden");
-        remoteVideo.classList.add("hidden");
-        if (streamTag) streamTag.classList.add("hidden");
-        if (sharerBanner) sharerBanner.classList.add("hidden");
     }
 }
+
 
 export function setVideoSource(stream: MediaStream | null) {
     if (!remoteVideo) return;
@@ -247,4 +256,35 @@ export function renderChat(messages: any[], selfId: string) {
         chatMessagesEl.appendChild(row);
     });
     chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+}
+
+export function setupUIListeners() {
+    if (startWhiteboardBtn) {
+        startWhiteboardBtn.addEventListener('click', () => {
+            if (state.isSharing) {
+                // Confirm or just stop sharing?
+                // For now, let's just stop sharing and start whiteboard
+                document.dispatchEvent(new CustomEvent('stop-sharing')); // This needs to be handled in main/state
+            }
+            whiteboard.start();
+            updateWhiteboardControls(true);
+        });
+    }
+
+    if (stopWhiteboardBtn) {
+        stopWhiteboardBtn.addEventListener('click', () => {
+            whiteboard.stop();
+            updateWhiteboardControls(false);
+        });
+    }
+}
+
+export function updateWhiteboardControls(isWhiteboarding: boolean) {
+    if (startWhiteboardBtn) startWhiteboardBtn.classList.toggle('hidden', isWhiteboarding);
+    if (stopWhiteboardBtn) stopWhiteboardBtn.classList.toggle('hidden', !isWhiteboarding);
+    if (shareScreenBtn) {
+        shareScreenBtn.disabled = isWhiteboarding;
+        shareScreenBtn.classList.toggle('opacity-50', isWhiteboarding);
+        shareScreenBtn.classList.toggle('cursor-not-allowed', isWhiteboarding);
+    }
 }

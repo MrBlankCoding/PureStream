@@ -1,4 +1,3 @@
-// import { ConnectionState } from "./constants.js";
 import { optimizeSDP, applyVideoEncoding } from "./utils.js";
 
 type SignalCallback = (id: string, data: any) => void;

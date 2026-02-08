@@ -12,8 +12,11 @@ import {
     setLocalPreviewSource,
     updateVoiceControls,
     renderChat,
-    setConnecting
+    setConnecting,
+    setupUIListeners,
+    updateWhiteboardControls,
 } from "./ui.js";
+import { whiteboard } from "./whiteboard.js";
 import { createIcons, icons } from "lucide";
 
 createIcons({ icons });
@@ -61,11 +64,20 @@ function initViewer(roomId: string, username: string) {
     if (myAvatar) myAvatar.textContent = username.charAt(0).toUpperCase();
 
     initConnection();
+    state.subscribe((s) => {
+        updateVideoStage(!!s.sharerId, s.sharerName, s.isWhiteboarding);
+        updateShareControls(s.isSharing);
+        updateWhiteboardControls(s.isWhiteboarding);
+    });
+
+    setupUIListeners();
 }
+
 
 leaveBtn.onclick = () => {
     voice.stop();
     ws.disconnect();
+    state.setWhiteboardData(null);
     window.location.href = "/";
 };
 
@@ -75,21 +87,41 @@ window.addEventListener("beforeunload", () => {
 });
 
 mobileParticipantsBtn.onclick = () => {
-    sidebar.classList.remove("-translate-x-full");
-    chatSidebar.classList.add("translate-x-full");
+    const isClosed = sidebar.classList.contains("md:w-0");
+
+    if (isClosed) {
+        sidebar.classList.remove("md:w-0", "md:border-l-0", "translate-x-full");
+        sidebar.classList.add("md:w-80", "md:border-l");
+        chatSidebar.classList.add("md:w-0", "md:border-l-0", "translate-x-full");
+        chatSidebar.classList.remove("md:w-80", "md:border-l");
+    } else {
+        sidebar.classList.add("md:w-0", "md:border-l-0", "translate-x-full");
+        sidebar.classList.remove("md:w-80", "md:border-l");
+    }
 };
 
 mobileChatBtn.onclick = () => {
-    chatSidebar.classList.remove("translate-x-full");
-    sidebar.classList.add("-translate-x-full");
+    const isClosed = chatSidebar.classList.contains("md:w-0");
+
+    if (isClosed) {
+        chatSidebar.classList.remove("md:w-0", "md:border-l-0", "translate-x-full");
+        chatSidebar.classList.add("md:w-80", "md:border-l");
+        sidebar.classList.add("md:w-0", "md:border-l-0", "translate-x-full");
+        sidebar.classList.remove("md:w-80", "md:border-l");
+    } else {
+        chatSidebar.classList.add("md:w-0", "md:border-l-0", "translate-x-full");
+        chatSidebar.classList.remove("md:w-80", "md:border-l");
+    }
 };
 
 closeSidebarBtn.onclick = () => {
-    sidebar.classList.add("-translate-x-full");
+    sidebar.classList.add("md:w-0", "md:border-l-0", "translate-x-full");
+    sidebar.classList.remove("md:w-80", "md:border-l");
 };
 
 closeChatBtn.onclick = () => {
-    chatSidebar.classList.add("translate-x-full");
+    chatSidebar.classList.add("md:w-0", "md:border-l-0", "translate-x-full");
+    chatSidebar.classList.remove("md:w-80", "md:border-l");
 };
 
 fullscreenBtn.onclick = toggleFullscreen;
@@ -122,18 +154,17 @@ async function toggleCall() {
         updateVoiceControls(false, false, false);
         ws.send({ type: "call-state", inCall: false });
         renderUserList(state.users, state.sharerId, state.userId, state.voicePeers);
-        joinCallBtn.classList.remove("bg-red-600", "hover:bg-red-700");
-        joinCallBtn.classList.add("bg-emerald-600", "hover:bg-emerald-700");
+        joinCallBtn.classList.remove("text-red-500");
+        joinCallBtn.classList.add("text-gray-400");
 
         const joinSpan = joinCallBtn.querySelector("span");
-        if (joinSpan) {
-            joinSpan.classList.remove("md:inline");
-            joinSpan.classList.add("md:inline");
-            joinSpan.textContent = "Join Call";
-        }
+        if (joinSpan) joinSpan.textContent = "Join Audio";
 
-        joinCallBtn.querySelector("i")?.setAttribute("data-lucide", "phone-call");
-        createIcons({ icons, nameAttr: 'data-lucide', attrs: { class: "w-4 h-4 md:w-5 md:h-5" } });
+        const icon = joinCallBtn.querySelector("i");
+        if (icon) {
+            icon.setAttribute("data-lucide", "headphones");
+            createIcons({ icons, nameAttr: 'data-lucide', attrs: { class: "w-5 h-5 group-hover:text-white transition-colors" } });
+        }
         return;
     }
 
@@ -142,20 +173,25 @@ async function toggleCall() {
         state.setInCall(true);
         ws.send({ type: "call-state", inCall: true });
         updateVoiceControls(state.voiceMuted, state.voiceDeafened, true);
-        joinCallBtn.classList.remove("bg-emerald-600", "hover:bg-emerald-700");
-        joinCallBtn.classList.add("bg-red-600", "hover:bg-red-700");
+        joinCallBtn.classList.remove("text-gray-400");
+        joinCallBtn.classList.add("text-red-500");
 
         const joinSpan = joinCallBtn.querySelector("span");
-        if (joinSpan) joinSpan.textContent = "Leave Call";
+        if (joinSpan) joinSpan.textContent = "Leave Audio";
 
-        joinCallBtn.querySelector("i")?.setAttribute("data-lucide", "phone-off");
-        createIcons({ icons, nameAttr: 'data-lucide', attrs: { class: "w-4 h-4 md:w-5 md:h-5" } });
+        const icon = joinCallBtn.querySelector("i");
+        if (icon) {
+            icon.setAttribute("data-lucide", "phone-off");
+            createIcons({ icons, nameAttr: 'data-lucide', attrs: { class: "w-5 h-5 group-hover:text-red-400 transition-colors" } });
+        }
+
         state.users.forEach(u => {
             if (u.id !== state.userId && u.inCall) {
                 voice.connectToUser(u.id);
             }
         });
     } else {
+
         showToast("Microphone access denied. Voice call unavailable.", "error");
     }
 }
@@ -221,10 +257,10 @@ function initConnection() {
 
         if (msg.sharerId && msg.sharerId !== state.userId) {
             setConnecting(true);
-            rtc.connectToSharer(msg.sharerId);
+            rtc.connectToSharer();
 
             connectionTimeout = setTimeout(() => {
-                const peerState = rtc.getPeerState(msg.sharerId);
+                const peerState = rtc.getPeerState();
                 console.log("[viewer] Connection watchdog check. State:", peerState);
                 if (peerState !== "connected" && peerState !== "completed" as string) {
                     console.log("[viewer] Requesting offer from sharer:", msg.sharerId);
@@ -265,7 +301,6 @@ function initConnection() {
             state.setIsSharing(false);
             updateShareControls(false, state.sharerId ? state.sharerId === state.userId : true);
         } else if (id === "remote") {
-            // Remote sharer stopped or track ended: clear UI
             state.setIsSharing(false);
             updateShareControls(false, state.sharerId ? state.sharerId === state.userId : true);
             updateVideoStage(false, null);
@@ -320,7 +355,7 @@ function initConnection() {
                 updateShareControls(false, false);
                 return;
             }
-            const stream = await rtc.startSharing(state.users, state.userId);
+            const stream = await rtc.startSharing();
             setLocalPreviewSource(stream);
             state.setIsSharing(true);
             updateShareControls(true);
@@ -349,4 +384,58 @@ function initConnection() {
         chatInput.value = "";
         ws.send({ type: "chat", text, username: state.username });
     });
+
+    setupWhiteboardToolbar();
+}
+
+function setupWhiteboardToolbar() {
+    const wbTools = {
+        select: document.getElementById('wb-tool-select'),
+        pen: document.getElementById('wb-tool-pen'),
+        highlighter: document.getElementById('wb-tool-highlighter'),
+        text: document.getElementById('wb-tool-text'),
+        eraser: document.getElementById('wb-tool-eraser')
+    };
+
+    const wbColors = document.querySelectorAll('.wb-color-btn');
+    const wbDownload = document.getElementById('wb-action-download');
+    const wbClear = document.getElementById('wb-action-clear');
+
+    function setActiveTool(tool: string) {
+        Object.entries(wbTools).forEach(([t, el]) => {
+            if (!el) return;
+            if (t === tool) {
+                el.classList.add('text-white', 'bg-[#333]');
+                el.classList.remove('text-gray-400');
+            } else {
+                el.classList.remove('text-white', 'bg-[#333]');
+                el.classList.add('text-gray-400');
+            }
+        });
+        whiteboard.setTool(tool);
+    }
+
+    if (wbTools.select) wbTools.select.onclick = () => setActiveTool('select');
+    if (wbTools.pen) wbTools.pen.onclick = () => setActiveTool('pen');
+    if (wbTools.highlighter) wbTools.highlighter.onclick = () => setActiveTool('highlighter');
+    if (wbTools.text) wbTools.text.onclick = () => setActiveTool('text');
+    if (wbTools.eraser) wbTools.eraser.onclick = () => setActiveTool('eraser');
+
+    wbColors.forEach(btn => {
+        (btn as HTMLElement).onclick = () => {
+            const color = (btn as HTMLElement).dataset.color;
+            if (color) {
+                whiteboard.setColor(color);
+                wbColors.forEach(b => b.classList.remove('ring-2', 'ring-white', 'scale-110'));
+                btn.classList.add('ring-2', 'ring-white', 'scale-110');
+            }
+        };
+    });
+
+    if (wbDownload) wbDownload.onclick = () => whiteboard.downloadImage();
+    if (wbClear) wbClear.onclick = () => {
+        if (confirm("Clear the entire whiteboard?")) {
+            whiteboard.remoteClear();
+        }
+    };
 }
