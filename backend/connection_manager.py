@@ -91,6 +91,12 @@ class ConnectionManager:
             if room_id in self._rooms and user_id in self._rooms[room_id].users:
                 self._rooms[room_id].users[user_id].username = username
 
+    async def get_username(self, room_id: str, user_id: str) -> str | None:
+        async with self._lock:
+            if room_id in self._rooms and user_id in self._rooms[room_id].users:
+                return self._rooms[room_id].users[user_id].username
+            return None
+
     async def update_heartbeat(self, room_id: str, user_id: str) -> None:
         async with self._lock:
             if room_id in self._rooms and user_id in self._rooms[room_id].users:

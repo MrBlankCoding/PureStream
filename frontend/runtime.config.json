@@ -1,0 +1,25 @@
+{
+  "window": {
+    "width": 1200,
+    "height": 800,
+    "resizable": true,
+    "title": "PureStream",
+    "frame": false,
+    "vibrancy": {
+      "enabled": true,
+      "material": "sidebar"
+    }
+  },
+  "permissions": {
+    "filesystem": true,
+    "notifications": true,
+    "shell": false,
+    "system": true,
+    "tray": false,
+    "shortcuts": false,
+    "microphone": true,
+    "camera": false,
+    "screen": true
+  },
+  "entry": "dist/index.html"
+}

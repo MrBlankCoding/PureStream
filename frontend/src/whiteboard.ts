@@ -1,6 +1,7 @@
 import { Canvas, FabricObject, IText, PencilBrush, Point, util } from 'fabric';
 import { ws } from './websocket';
 import { state } from './state';
+import { generateUUID } from './config';
 
 interface ObjectModifiedEvent {
     target?: FabricObject;
@@ -353,7 +354,7 @@ export class WhiteboardManager {
     }
 
     private generateId(): string {
-        return crypto.randomUUID();
+        return generateUUID();
     }
 
     private setupCanvasListeners(): void {

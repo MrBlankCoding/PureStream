@@ -1,3 +1,5 @@
+import { generateUUID } from "./config.js";
+
 interface User {
     id: string;
     username: string;
@@ -43,7 +45,7 @@ class AppState {
 
     constructor() {
         this._state = {
-            userId: crypto.randomUUID(),
+            userId: generateUUID(),
             username: "Guest",
             roomId: null,
             users: [],

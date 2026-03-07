@@ -1,9 +1,40 @@
 import "./styles.css";
 import { showToast } from "./ui.js";
 import { createIcons, icons } from "lucide";
-import { BACKEND_URL, getRelativePath } from "./config.js";
+import { BACKEND_URL, getRelativePath, getBackendMode, setBackendMode, IS_PACKAGED } from "./config.js";
 
 createIcons({ icons });
+
+const serverLocalBtn = document.getElementById("server-local") as HTMLButtonElement;
+const serverHostedBtn = document.getElementById("server-hosted") as HTMLButtonElement;
+
+function updateServerButtons() {
+    if (!IS_PACKAGED) {
+        if (serverLocalBtn) serverLocalBtn.parentElement?.classList.add("hidden");
+        return;
+    }
+    
+    const mode = getBackendMode();
+    if (mode === 'local') {
+        serverLocalBtn.className = "text-[10px] uppercase tracking-widest px-2 py-1 rounded transition-colors bg-blue-600/20 text-blue-400 border border-blue-500/40";
+        serverHostedBtn.className = "text-[10px] uppercase tracking-widest px-2 py-1 rounded transition-colors text-gray-500 hover:text-gray-300";
+    } else {
+        serverHostedBtn.className = "text-[10px] uppercase tracking-widest px-2 py-1 rounded transition-colors bg-blue-600/20 text-blue-400 border border-blue-500/40";
+        serverLocalBtn.className = "text-[10px] uppercase tracking-widest px-2 py-1 rounded transition-colors text-gray-500 hover:text-gray-300";
+    }
+}
+
+if (serverLocalBtn && serverHostedBtn) {
+    serverLocalBtn.onclick = () => {
+        setBackendMode('local');
+        window.location.reload();
+    };
+    serverHostedBtn.onclick = () => {
+        setBackendMode('hosted');
+        window.location.reload();
+    };
+    updateServerButtons();
+}
 
 const createUsernameInput = document.getElementById("create-username") as HTMLInputElement;
 const joinUsernameInput = document.getElementById("join-username") as HTMLInputElement;

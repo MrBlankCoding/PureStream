@@ -18,7 +18,7 @@ import {
 } from "./ui.js";
 import { whiteboard } from "./whiteboard.js";
 import { createIcons, icons } from "lucide";
-import { getRelativePath } from "./config.js";
+import { getRelativePath, FRONTEND_URL } from "./config.js";
 
 createIcons({ icons });
 
@@ -79,7 +79,7 @@ leaveBtn.onclick = () => {
     voice.stop();
     ws.disconnect();
     state.setWhiteboardData(null);
-    window.location.href = getRelativePath("/");
+    window.location.replace(getRelativePath("/"));
 };
 
 window.addEventListener("beforeunload", () => {
@@ -223,7 +223,7 @@ document.addEventListener("fullscreenchange", () => {
 
 copyRoomIdBtn.onclick = () => {
     if (!state.roomId) return;
-    const url = `${window.location.origin}/?room=${state.roomId}`;
+    const url = `${FRONTEND_URL}/?room=${state.roomId}`;
     navigator.clipboard.writeText(url);
     showToast("Room Link copied!");
 };

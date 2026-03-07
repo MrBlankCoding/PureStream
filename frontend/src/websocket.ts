@@ -48,17 +48,21 @@ export class WebSocketManager {
             try {
                 const msg = JSON.parse(event.data);
                 this._emit(msg.type, msg);
-            } catch (e) { }
+            } catch (e) {
+                console.error("WebSocket message parse error:", e, event.data);
+            }
         };
 
-        this._socket.onclose = () => {
+        this._socket.onclose = (event) => {
             this._connected = false;
             this._stopHeartbeat();
+            console.warn("WebSocket closed:", event.code, event.reason);
             this._emit("close");
             this._scheduleReconnect();
         };
 
-        this._socket.onerror = () => {
+        this._socket.onerror = (error) => {
+            console.error("WebSocket error:", error);
             this._emit("error");
         };
     }
