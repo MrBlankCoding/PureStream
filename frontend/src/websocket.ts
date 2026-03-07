@@ -1,3 +1,5 @@
+import { WS_URL } from "./config.js";
+
 const HEARTBEAT_INTERVAL = 8000;
 const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 16000];
 
@@ -31,9 +33,8 @@ export class WebSocketManager {
             this._socket.close();
         }
 
-        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
         this._socket = new WebSocket(
-            `${protocol}//${window.location.host}/ws/${this._roomId}/${this._userId}`
+            `${WS_URL}/ws/${this._roomId}/${this._userId}`
         );
 
         this._socket.onopen = () => {

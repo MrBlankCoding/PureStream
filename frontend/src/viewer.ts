@@ -18,6 +18,7 @@ import {
 } from "./ui.js";
 import { whiteboard } from "./whiteboard.js";
 import { createIcons, icons } from "lucide";
+import { getRelativePath } from "./config.js";
 
 createIcons({ icons });
 
@@ -45,7 +46,7 @@ const roomId = urlParams.get("room");
 const username = urlParams.get("username");
 
 if (!roomId || !username) {
-    window.location.href = "/";
+    window.location.href = getRelativePath("/");
 } else {
     initViewer(roomId, username);
 }
@@ -78,7 +79,7 @@ leaveBtn.onclick = () => {
     voice.stop();
     ws.disconnect();
     state.setWhiteboardData(null);
-    window.location.href = "/";
+    window.location.href = getRelativePath("/");
 };
 
 window.addEventListener("beforeunload", () => {

@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import { resolve } from 'path';
 
 export default defineConfig({
+  base: './',
   server: {
     proxy: {
       '/new-room': {
@@ -14,7 +15,26 @@ export default defineConfig({
       }
     }
   },
+  plugins: [
+    {
+      name: "beacon-file-runtime-html",
+      enforce: "post",
+      transformIndexHtml(html, ctx) {
+        // Keep dev-server HTML untouched so ESM scripts still run.
+        if (!ctx?.bundle) {
+          return html;
+        }
+        // Remove crossorigin which breaks file:// protocol in some WebKit versions
+        // But KEEP type="module" since we are using ESM imports in the bundle
+        return html
+          .replace(/\s+crossorigin(?:="[^"]*")?/g, "");
+      }
+    }
+  ],
   build: {
+    modulePreload: false,
+    outDir: "dist",
+    emptyOutDir: true,
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),

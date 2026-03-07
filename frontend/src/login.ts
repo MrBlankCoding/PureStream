@@ -1,6 +1,7 @@
 import "./styles.css";
 import { showToast } from "./ui.js";
 import { createIcons, icons } from "lucide";
+import { BACKEND_URL, getRelativePath } from "./config.js";
 
 createIcons({ icons });
 
@@ -32,7 +33,7 @@ if (createRoomBtn) {
         localStorage.setItem("purestream_username", username);
 
         try {
-            const res = await fetch("/new-room");
+            const res = await fetch(`${BACKEND_URL}/new-room`);
             const data = await res.json();
             enterRoom(data.room_id, username);
         } catch (e) {
@@ -61,6 +62,5 @@ if (joinRoomBtn) {
 }
 
 function enterRoom(roomId: string, username: string): void {
-    window.location.href = `/viewer.html?room=${roomId}&username=${encodeURIComponent(username)}`;
+    window.location.href = getRelativePath(`/viewer.html?room=${roomId}&username=${encodeURIComponent(username)}`);
 }
-
