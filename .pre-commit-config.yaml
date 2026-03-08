@@ -1,0 +1,38 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.9
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: backend-tests
+        name: backend-tests
+        entry: bash -c "cd backend && ./.venv/bin/python -m pytest tests/test_connection_manager.py"
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: frontend-lint
+        name: frontend-lint
+        entry: bash -c "cd frontend && npm run build"
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: frontend-tests
+        name: frontend-tests
+        entry: bash -c "cd frontend && npm run test"
+        language: system
+        pass_filenames: false
+        always_run: true

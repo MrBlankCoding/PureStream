@@ -20,10 +20,10 @@ from message_types import (
     user_list_message,
     voice_signal_message,
     voice_state_message,
+    whiteboard_cursor_message,
     whiteboard_start_message,
     whiteboard_stop_message,
     whiteboard_update_message,
-    whiteboard_cursor_message,
 )
 from sfu import sfu
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -163,7 +163,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, user_id: str):
                 if data:
                     # Get username from manager or message? Ideally manager has it.
                     # check if we can get it from connection info, or just pass it through if client sends it.
-                    # Client sends it? `whiteboard.ts` sends data: {x,y}, no username. 
+                    # Client sends it? `whiteboard.ts` sends data: {x,y}, no username.
                     # But `websocket_endpoint` knows `user_id`. `manager` likely knows `username`.
                     # Let's fetch username from the session or manager if possible, or just Anonymous if not found.
                     # Optimization: Just pass what's needed. frontend `whiteboard.ts` expects `username` in the event.
@@ -173,8 +173,9 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, user_id: str):
                     # But that's an async call `manager.get_username`.
                     # Let's try to get it.
                     username = await manager.get_username(room_id, user_id) or "Anonymous"
-                    await manager.broadcast(room_id, whiteboard_cursor_message(user_id, data, username), exclude_id=user_id)
-
+                    await manager.broadcast(
+                        room_id, whiteboard_cursor_message(user_id, data, username), exclude_id=user_id
+                    )
 
     except WebSocketDisconnect:
         pass

@@ -73,7 +73,7 @@ export class WhiteboardManager {
         this.container = container;
         const toolbar = container.querySelector('#whiteboard-toolbar') as HTMLElement | null;
         this.toolbar = toolbar;
-        
+
         container.innerHTML = '';
         if (toolbar) container.appendChild(toolbar);
 
@@ -117,7 +117,7 @@ export class WhiteboardManager {
     private setupBrushSizeControl(): void {
         const brushSizeInput = document.getElementById('wb-brush-size') as HTMLInputElement | null;
         const brushSizeLabel = document.getElementById('wb-brush-size-label');
-        
+
         if (!brushSizeInput) return;
 
         brushSizeInput.value = String(this.brushSize);
@@ -141,11 +141,11 @@ export class WhiteboardManager {
 
     private resizeCanvasElement(canvasEl: HTMLCanvasElement): void {
         if (!this.container) return;
-        
+
         const parent = this.container.parentElement;
         const target = parent || this.container;
         const { width, height } = target.getBoundingClientRect();
-        
+
         canvasEl.width = width;
         canvasEl.height = height;
         canvasEl.style.height = '100%';
@@ -165,11 +165,11 @@ export class WhiteboardManager {
 
     private handleResize = (): void => {
         if (!this.canvas || !this.container) return;
-        
+
         const parent = this.container.parentElement;
         const target = parent || this.container;
         const { width, height } = target.getBoundingClientRect();
-        
+
         this.canvas.setDimensions({ width, height });
         this.canvas.renderAll();
     };
@@ -238,11 +238,11 @@ export class WhiteboardManager {
     private handleSpaceKeyUp(): void {
         this.isSpaceDown = false;
         this.isPanning = false;
-        
+
         if (this.canvas) {
             this.canvas.defaultCursor = 'default';
         }
-        
+
         this.setTool(this.currentTool);
     }
 
@@ -267,7 +267,7 @@ export class WhiteboardManager {
                 this.configureTextTool();
                 break;
         }
-        
+
         this.canvas.requestRenderAll();
     }
 

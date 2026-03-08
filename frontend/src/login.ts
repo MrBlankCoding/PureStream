@@ -13,7 +13,7 @@ function updateServerButtons() {
         if (serverLocalBtn) serverLocalBtn.parentElement?.classList.add("hidden");
         return;
     }
-    
+
     const mode = getBackendMode();
     if (mode === 'local') {
         serverLocalBtn.className = "text-[10px] uppercase tracking-widest px-2 py-1 rounded transition-colors bg-blue-600/20 text-blue-400 border border-blue-500/40";

@@ -3,7 +3,7 @@ import { state } from '../state';
 
 describe('AppState', () => {
     beforeEach(() => {
-        // Reset state or create a new instance if needed, 
+        // Reset state or create a new instance if needed,
         // but for now let's just test the singleton behavior.
         state.setUsername('Guest');
     });

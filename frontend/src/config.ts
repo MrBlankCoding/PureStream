@@ -11,11 +11,11 @@ export function setBackendMode(mode: 'local' | 'hosted') {
 
 export const FRONTEND_URL = IS_PACKAGED ? 'https://purestream.onrender.com' : window.location.origin;
 
-export const BACKEND_URL = IS_PACKAGED 
-    ? (getBackendMode() === 'hosted' ? 'https://purestream.onrender.com' : 'http://localhost:8000') 
+export const BACKEND_URL = IS_PACKAGED
+    ? (getBackendMode() === 'hosted' ? 'https://purestream.onrender.com' : 'http://localhost:8000')
     : '';
 
-export const WS_URL = IS_PACKAGED 
+export const WS_URL = IS_PACKAGED
     ? (getBackendMode() === 'hosted' ? 'wss://purestream.onrender.com' : 'ws://localhost:8000')
     : (window.location.protocol === "https:" ? "wss:" : "ws:") + "//" + window.location.host;
 
