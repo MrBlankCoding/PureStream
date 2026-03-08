@@ -70,6 +70,7 @@ class AppState {
     get sharerId(): string | null { return this._state.sharerId; }
     get sharerName(): string | null { return this._state.sharerName; }
     get isSharing(): boolean { return this._state.isSharing; }
+    get isWhiteboarding(): boolean { return this._state.isWhiteboarding; }
     get voiceMuted(): boolean { return this._state.voiceMuted; }
     get voiceDeafened(): boolean { return this._state.voiceDeafened; }
     get voicePeers(): Map<string, VoicePeerState> { return this._state.voicePeers; }

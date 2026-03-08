@@ -120,9 +120,11 @@ export class WebSocketManager {
     disconnect(): void {
         this._roomId = null;
         this._stopHeartbeat();
+        this._connected = false;
         if (this._socket) {
             this._socket.close();
             this._socket = null;
+            this._emit("close");
         }
     }
 
